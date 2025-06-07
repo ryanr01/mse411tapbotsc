@@ -8,7 +8,7 @@
 #include "freertos/task.h"
 #include "driver/rmt_tx.h"
 #include "driver/gpio.h"
-#include "esp_log.h"
+#include "esp_log.h" 
 #include "stepper_motor_encoder.h"
 
 ///////////////////////////////Change the following configurations according to your board//////////////////////////////
