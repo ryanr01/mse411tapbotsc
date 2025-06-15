@@ -9,6 +9,8 @@
 
 static const char *TAG = "stepper_motor_encoder";
 
+
+
 static float convert_to_smooth_freq(uint32_t freq1, uint32_t freq2, uint32_t freqx)
 {
     float normalize_x = ((float)(freqx - freq1)) / (freq2 - freq1);
