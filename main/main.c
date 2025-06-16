@@ -1,10 +1,12 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/rmt_tx.h"
+#include "driver/rmt_common.h"
 #include "driver/gpio.h"
 #include "esp_log.h" 
 #include "stepper_motor_encoder.h"
 //Define GPIOs
+//Motor Top GPIOs
 #define STEP_MOTOR_GPIO_EN       6
 #define STEP_MOTOR_GPIO_DIR      5
 #define STEP_MOTOR_GPIO_STEP     4
@@ -108,10 +110,14 @@ void stepper_motor_init(
     ESP_ERROR_CHECK(rmt_enable(motor->rmt_chan));
 }
 
-void carrier_home(stepper_motor_t *motor, uint32_t *accel_steps,
-                  uint32_t *uniform_speed_hz, uint32_t *decel_steps,
+void carrier_home(stepper_motor_t *motor,
+                  uint32_t *uniform_speed_hz,
                   gpio_num_t limit_gpio) {
-
+    
+    if (gpio_get_level(limit_gpio) == 1) {
+        ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
+        return;
+    }
     rmt_transmit_config_t tx_config = {
     .loop_count = 0,
     .flags = {
@@ -122,17 +128,17 @@ void carrier_home(stepper_motor_t *motor, uint32_t *accel_steps,
 
     gpio_set_level(motor->gpio_dir, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
     gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
-
-    ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->accel_encoder, accel_steps, sizeof(uint32_t), &tx_config));
+    tx_config.loop_count = 1000000; // Set a high loop count for acceleration phase
+    ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz, sizeof(uint32_t), &tx_config));
 
     while (gpio_get_level(limit_gpio) != 1) {
-        tx_config.loop_count = 1000;
-        ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz, sizeof(uint32_t), &tx_config));
         vTaskDelay(1); // Prevent CPU starvation
     }
 
-    tx_config.loop_count = 0;
-    ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->decel_encoder, decel_steps, sizeof(uint32_t), &tx_config));
+    ESP_LOGI("StepperMotor", "end limit reached.");
+    rmt_tx_stop(motor->rmt_chan);
+    rmt_disable(motor->rmt_chan);
+    rmt_enable(motor->rmt_chan);
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 }
@@ -148,10 +154,11 @@ void app_main(void) {
 
     while (1) {
         if (gpio_get_level(TOP_END_LIMIT_GPIO) == 0) {
-            carrier_home(&motor1, &accel_steps, &uniform_speed_hz, &decel_steps, TOP_END_LIMIT_GPIO);
-            break;
+            esp_log_level_set("*", ESP_LOG_INFO);
+            ESP_LOGI("StepperMotor", "Top end limit reached, homing...");
+            carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
         }
-        vTaskDelay(10); // check periodically
+        vTaskDelay(100); // check periodically
     }
 }
 
