@@ -1,5 +1,6 @@
 #include "freertos/FreeRTOS.h"
 #include <math.h>
+#include <stdbool.h>
 #include "freertos/task.h"
 #include "driver/rmt_tx.h"
 #include "driver/rmt_common.h"
@@ -153,34 +154,37 @@ void carrier_home(stepper_motor_t *motor,
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 }
 
-void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, uint32_t distance_along_blade, gpio_num_t limit_switch, gpio_num_t tapper_gpio, uint32_t tap_duration,bool direction) {
+void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *cfg) {
     
     rmt_transmit_config_t tx_config = {
         .loop_count = 0,
         .flags = {
             .eot_level = 0
         }
-        };
+    };
     gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
 
+    bool direction = cfg->direction;
     for (int j = 0; j < 5; j++) {
-        uint32_t i =0
-        gpio_set_level(motor->gpio_dir, direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
-        
-        while (gpio_get_level(limit_switch) == 0 && distance_along_blade / 10 > i){
+        uint32_t i = 0;
+        gpio_set_level(motor->gpio_dir,
+                       direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
+
+        while (gpio_get_level(cfg->limit_switch) == 0 && cfg->blade_lenght / 10 > i) {
             i++;
             //add audio recording here
-            ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz, sizeof(uint32_t), NULL));
+            ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
+                                       uniform_speed_hz, sizeof(uint32_t), NULL));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
-            gpio_set_level(tapper_gpio, 1);
-            vtaskDelay(10); 
-            gpio_set_level(tapper_gpio, 0);
+            gpio_set_level(cfg->tapper_gpio, 1);
+            vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
+            gpio_set_level(cfg->tapper_gpio, 0);
         }
         // set direction
         direction = !direction;
         gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
         ESP_LOGI("StepperMotor", "Tap %d completed.", j + 1);
-        vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay before next tap
+        vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
     }
 }
 
@@ -194,19 +198,40 @@ void app_main(void) {
     uint32_t uniform_speed_hz = 1500;
     uint32_t decel_steps = 10;
 
+    taptest_side_config side_cfg[2] = {
+        {
+            .blade_width = 1000,
+            .blade_lenght = 1000,
+            .limit_switch = TOP_END_LIMIT_GPIO,
+            .tapper_gpio = TAPBOT_RESET_PB_GPIO,
+            .tap_duration = 10,
+            .recording_duration = 1000,
+            .direction = true,
+        },
+        {
+            .blade_width = 1000,
+            .blade_lenght = 1000,
+            .limit_switch = TOP_END_LIMIT_GPIO,
+            .tapper_gpio = TAPBOT_RESET_PB_GPIO,
+            .tap_duration = 10,
+            .recording_duration = 1000,
+            .direction = false,
+        }
+    };
+
     while (1) {
         if (gpio_get_level(TOP_END_LIMIT_GPIO) == 0) {
             esp_log_level_set("*", ESP_LOG_INFO);
             ESP_LOGI("StepperMotor", "Top end limit reached, homing...");
             carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
-            tap_sequence(&motor1, &uniform_speed_hz, 1000, TAPBOT_RESET_PB_GPIO, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
         }
-        
-            esp_log_level_set("*", ESP_LOG_INFO);
-            ESP_LOGI("StepperMotor", "Tap sequence started.");
-            tap_sequence(&motor1, &uniform_speed_hz, 1000, TAPBOT_RESET_PB_GPIO);
-        
-        vTaskDelay(100); // check periodically
+
+        esp_log_level_set("*", ESP_LOG_INFO);
+        ESP_LOGI("StepperMotor", "Tap sequence started.");
+        tap_sequence(&motor1, &uniform_speed_hz, &side_cfg[0]);
+        tap_sequence(&motor1, &uniform_speed_hz, &side_cfg[1]);
+
+        vTaskDelay(pdMS_TO_TICKS(100)); // check periodically
     }
 }
 
