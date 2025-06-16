@@ -1,4 +1,5 @@
 #include "freertos/FreeRTOS.h"
+#include <math.h>
 #include "freertos/task.h"
 #include "driver/rmt_tx.h"
 #include "driver/rmt_common.h"
@@ -36,6 +37,16 @@ typedef struct {
     rmt_encoder_handle_t uniform_encoder;
     rmt_encoder_handle_t decel_encoder;
 } stepper_motor_t;
+
+typedef struct {
+    uint32_t blade_width;
+    uint32_t blade_lenght;
+    int limit_switch;
+    int tapper_gpio;
+    uint32_t tap_duration;
+    uint32_t recording_duration;
+    bool direction;
+} taptest_side_config;
 
 void setup_gpio_input(int gpio_num) {
     gpio_config_t io_conf = {
@@ -135,13 +146,44 @@ void carrier_home(stepper_motor_t *motor,
         vTaskDelay(1); // Prevent CPU starvation
     }
 
-    ESP_LOGI("StepperMotor", "end limit reached.");
-    rmt_tx_stop(motor->rmt_chan);
     rmt_disable(motor->rmt_chan);
     rmt_enable(motor->rmt_chan);
+    ESP_LOGI("StepperMotor", "end limit reached.");
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 }
+
+void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, uint32_t distance_along_blade, gpio_num_t limit_switch, gpio_num_t tapper_gpio, uint32_t tap_duration,bool direction) {
+    
+    rmt_transmit_config_t tx_config = {
+        .loop_count = 0,
+        .flags = {
+            .eot_level = 0
+        }
+        };
+    gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
+
+    for (int j = 0; j < 5; j++) {
+        uint32_t i =0
+        gpio_set_level(motor->gpio_dir, direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
+        
+        while (gpio_get_level(limit_switch) == 0 && distance_along_blade / 10 > i){
+            i++;
+            //add audio recording here
+            ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz, sizeof(uint32_t), NULL));
+            ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
+            gpio_set_level(tapper_gpio, 1);
+            vtaskDelay(10); 
+            gpio_set_level(tapper_gpio, 0);
+        }
+        // set direction
+        direction = !direction;
+        gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+        ESP_LOGI("StepperMotor", "Tap %d completed.", j + 1);
+        vTaskDelay(1000 / portTICK_PERIOD_MS); // Delay before next tap
+    }
+}
+
 
 void app_main(void) {
     stepper_motor_t motor1;
@@ -157,7 +199,13 @@ void app_main(void) {
             esp_log_level_set("*", ESP_LOG_INFO);
             ESP_LOGI("StepperMotor", "Top end limit reached, homing...");
             carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
+            tap_sequence(&motor1, &uniform_speed_hz, 1000, TAPBOT_RESET_PB_GPIO, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
         }
+        
+            esp_log_level_set("*", ESP_LOG_INFO);
+            ESP_LOGI("StepperMotor", "Tap sequence started.");
+            tap_sequence(&motor1, &uniform_speed_hz, 1000, TAPBOT_RESET_PB_GPIO);
+        
         vTaskDelay(100); // check periodically
     }
 }
