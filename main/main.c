@@ -174,7 +174,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             i++;
             //add audio recording here
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
-                                       uniform_speed_hz, sizeof(uint32_t), NULL));
+                                       uniform_speed_hz, sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
             gpio_set_level(cfg->tapper_gpio, 1);
             vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
@@ -194,29 +194,11 @@ void app_main(void) {
     stepper_motor_init(&motor1, 6, 5, 4, 500, 1500, 500, 500, 1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO);
 
-    uint32_t accel_steps = 10;
     uint32_t uniform_speed_hz = 1500;
-    uint32_t decel_steps = 10;
 
     taptest_side_config side_cfg[2] = {
-        {
-            .blade_width = 1000,
-            .blade_lenght = 1000,
-            .limit_switch = TOP_END_LIMIT_GPIO,
-            .tapper_gpio = TAPBOT_RESET_PB_GPIO,
-            .tap_duration = 10,
-            .recording_duration = 1000,
-            .direction = true,
-        },
-        {
-            .blade_width = 1000,
-            .blade_lenght = 1000,
-            .limit_switch = TOP_END_LIMIT_GPIO,
-            .tapper_gpio = TAPBOT_RESET_PB_GPIO,
-            .tap_duration = 10,
-            .recording_duration = 1000,
-            .direction = false,
-        }
+        {1000, 1000, TOP_END_LIMIT_GPIO, TAPBOT_RESET_PB_GPIO, 10, 1000, true},
+        {1000, 1000, TOP_END_LIMIT_GPIO, TAPBOT_RESET_PB_GPIO, 10, 1000, false}
     };
 
     while (1) {
