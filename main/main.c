@@ -5,8 +5,16 @@
 #include "driver/rmt_tx.h"
 #include "driver/rmt_common.h"
 #include "driver/gpio.h"
-#include "esp_log.h" 
+#include "esp_log.h"
+#include "esp_attr.h"
 #include "stepper_motor_encoder.h"
+
+static volatile bool stop_requested = false;
+
+static void IRAM_ATTR stop_button_isr_handler(void *arg)
+{
+    stop_requested = true;
+}
 //Define GPIOs
 //Motor Top GPIOs
 #define STEP_MOTOR_GPIO_EN       6
@@ -155,6 +163,12 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz, sizeof(uint32_t), &tx_config));
 
     while (gpio_get_level(limit_gpio) != 1) {
+        if (stop_requested) {
+            rmt_disable(motor->rmt_chan);
+            gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+            stop_requested = false;
+            return;
+        }
         vTaskDelay(1); // Prevent CPU starvation
     }
 
@@ -176,11 +190,11 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
 
     bool direction = !cfg->direction;
-    for (int j = 0; j < 5; j++) {
+    for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir,
                        direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
 
-        for (int i = 0; i < (cfg->blade_width / 10); i++) {
+        for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
             //add audio recording here
             if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
@@ -191,19 +205,31 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             tx_config.loop_count = 10000;
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                     uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
-            ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1)); 
+            ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
             vTaskDelay(pdMS_TO_TICKS(200)); // Delay to allow motor to move
             gpio_set_level(cfg->tapper_gpio, 1);
             vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
             gpio_set_level(cfg->tapper_gpio, 0);
             vTaskDelay(pdMS_TO_TICKS(200));
             ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", direction ? i * 10 : (int)(cfg->blade_width - i * 10));
+            if (stop_requested) {
+                rmt_disable(motor->rmt_chan);
+                gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+                stop_requested = false;
+                return;
+            }
         }
         // set direction
         direction = !direction;
         
         
         vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
+        if (stop_requested) {
+            rmt_disable(motor->rmt_chan);
+            gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+            stop_requested = false;
+            return;
+        }
     }
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 }
@@ -213,9 +239,14 @@ void app_main(void) {
     stepper_motor_t motor1;
     stepper_motor_init(&motor1, 6, 5, 4, 500, 1500, 500, 500, 1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO);
+    setup_gpio_input(STOP_PB_GPIO);
     setup_gpio_input(START_PB_GPIO);
     setup_gpio_input(TAPBOT_RESET_PB_GPIO);
     setup_gpio_input(CARRIER_RESET_PB_GPIO);
+
+    gpio_set_intr_type(STOP_PB_GPIO, GPIO_INTR_NEGEDGE);
+    gpio_install_isr_service(0);
+    gpio_isr_handler_add(STOP_PB_GPIO, stop_button_isr_handler, NULL);
 
     uint32_t uniform_speed_hz = 5000;
 
