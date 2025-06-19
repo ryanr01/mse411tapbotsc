@@ -20,14 +20,14 @@
 #define TOP_END_LIMIT_GPIO       7 // GPIO for end limit switch
 
 // Push button GPIOs
-#define STOP_PB_GPIO             8 // GPIO for stop push button
+#define STOP_PB_GPIO            12 // GPIO for stop push button
 #define START_PB_GPIO            9 // GPIO for start push button
 #define CARRIER_RESET_PB_GPIO   10 // GPIO for carrier home push button
 #define TAPBOT_RESET_PB_GPIO    11 // GPIO for tapbot home push button  
 
 // Define stepper motor parameters
 #define STEP_MOTOR_ENABLE_LEVEL  0 // TMC2209 is enabled on low level(make sure to snip off Diag and one next to it)
-#define STEP_MOTOR_SPIN_DIR_CLOCKWISE 1
+#define STEP_MOTOR_SPIN_DIR_CLOCKWISE 0
 #define STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE !STEP_MOTOR_SPIN_DIR_CLOCKWISE
 
 #define STEP_MOTOR_RESOLUTION_HZ 1000000  // 1 MHz RMT resolution
@@ -43,8 +43,8 @@ typedef struct {
 } stepper_motor_t;
 
 typedef struct {
-    uint32_t blade_width;
-    uint32_t blade_lenght;
+    float blade_width;
+    float blade_lenght;
     int limit_switch;
     int tapper_gpio;
     uint32_t tap_duration;
@@ -56,7 +56,7 @@ typedef enum {
     STATE_IDLE,
     STATE_CARRIER_HOME,
     STATE_TAPBOT_RESET,
-    STATE_TAP_SEQUENCE,
+    STATE_TAPTEST_SEQUENCE,
     STATE_DONE
 } state_t;
 
@@ -175,27 +175,29 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     };
     gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
 
-    bool direction = cfg->direction;
+    bool direction = !cfg->direction;
     for (int j = 0; j < 5; j++) {
         gpio_set_level(motor->gpio_dir,
                        direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
 
         for (int i = 0; i < (cfg->blade_width / 10); i++) {
             //add audio recording here
-            if( gpio_get_level(cfg->limit_switch) == 0&&(i>1||i<0.9*cfg->blade_lenght/10)) {
+            if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
                 gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
                 break;
             }
             uint32_t n_steps = 1;
-            tx_config.loop_count = 1000;  // ensure no looping
+            tx_config.loop_count = 10000;
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                     uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1)); 
+            vTaskDelay(pdMS_TO_TICKS(200)); // Delay to allow motor to move
             gpio_set_level(cfg->tapper_gpio, 1);
             vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
             gpio_set_level(cfg->tapper_gpio, 0);
-            ESP_LOGI("StepperMotor", "Cord Position %d",  i);
+            vTaskDelay(pdMS_TO_TICKS(200));
+            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", direction ? i * 10 : (int)(cfg->blade_width - i * 10));
         }
         // set direction
         direction = !direction;
@@ -211,8 +213,11 @@ void app_main(void) {
     stepper_motor_t motor1;
     stepper_motor_init(&motor1, 6, 5, 4, 500, 1500, 500, 500, 1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO);
+    setup_gpio_input(START_PB_GPIO);
+    setup_gpio_input(TAPBOT_RESET_PB_GPIO);
+    setup_gpio_input(CARRIER_RESET_PB_GPIO);
 
-    uint32_t uniform_speed_hz = 500;
+    uint32_t uniform_speed_hz = 5000;
 
     taptest_side_config side_cfg = {100, 1000, TOP_END_LIMIT_GPIO, TAPBOT_RESET_PB_GPIO, 100, 1000, 1};
 
@@ -221,33 +226,44 @@ void app_main(void) {
     while (1) {
         switch (state) {
             case STATE_IDLE:
-                if (start_pressed()) state = STATE_CARRIER_HOME;
+                if (gpio_get_level(START_PB_GPIO)==1) state = STATE_TAPTEST_SEQUENCE;
+                else if (gpio_get_level(CARRIER_RESET_PB_GPIO)==1) state = STATE_CARRIER_HOME;
+                else if (gpio_get_level(TAPBOT_RESET_PB_GPIO)==1) state = STATE_TAPBOT_RESET;
+                ESP_LOGI("StepperMotor", "Waiting for action...");
                 break;
 
             case STATE_CARRIER_HOME:
+                ESP_LOGI("StepperMotor", "Homing carrier...");
                 if (gpio_get_level(TOP_END_LIMIT_GPIO) == 0) {
                     esp_log_level_set("*", ESP_LOG_INFO);
                     carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
                 }
-                state = STATE_TAP_SEQUENCE;
+                ESP_LOGI("StepperMotor", "Carrier homed.");
+                state = STATE_IDLE;
                 break;
                 
 
             case STATE_TAPBOT_RESET:
+                carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
+                
                 ESP_LOGI("StepperMotor", "Resetting tapbot...");
+                state = STATE_IDLE;
                 break;
 
-            case STATE_TAP_SEQUENCE:
+            case STATE_TAPTEST_SEQUENCE:
+                carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
+                ESP_LOGI("Tap Test", "Starting tap sequence...");
                 tap_sequence(&motor1, &uniform_speed_hz, &side_cfg);
-                state = STATE_DONE;
+                state = STATE_IDLE;
                 break;
 
             case STATE_DONE:
-                if (reset_pressed()) state = STATE_IDLE;
+                
+                ESP_LOGI("Tap Test done", "Resetting tapbot...");
                 break;
         }
 
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 }
 
