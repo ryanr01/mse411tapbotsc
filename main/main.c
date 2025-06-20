@@ -209,6 +209,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                     uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
+            // Put tap call here 
             vTaskDelay(pdMS_TO_TICKS(200)); // Delay to allow motor to move
             gpio_set_level(cfg->tapper_gpio, 1);
             vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
