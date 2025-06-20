@@ -20,7 +20,7 @@ static void IRAM_ATTR stop_button_isr_handler(void *arg)
 //Motor Top GPIOs
 #define STEP_MOTOR_GPIO_EN       6
 #define STEP_MOTOR_GPIO_DIR      20
-#define STEP_MOTOR_GPIO_STEP     21
+#define STEP_MOTOR_GPIO_STEP     19
 
 // GPIOs for other outputs
 // #define TAPBOT_TAPPER_GPIO      13 // This is already set in recordSample.h
