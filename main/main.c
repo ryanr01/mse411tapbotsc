@@ -68,10 +68,12 @@ typedef enum {
     STATE_DONE
 } state_t;
 
-void setup_gpio_input(int gpio_num) {
+void setup_gpio_input(int gpio_num, bool pull_up, bool pull_down) {
     gpio_config_t io_conf = {
         .pin_bit_mask = (1ULL << gpio_num),
         .mode = GPIO_MODE_INPUT,
+        .pull_up_en = pull_up,
+        .pull_down_en = pull_down,
         .intr_type = GPIO_INTR_DISABLE,
     };
     ESP_ERROR_CHECK(gpio_config(&io_conf));
@@ -240,11 +242,11 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
 void app_main(void) {
     stepper_motor_t motor1;
     stepper_motor_init(&motor1, 6, 5, 4, 500, 1500, 500, 500, 1500);
-    setup_gpio_input(TOP_END_LIMIT_GPIO);
-    setup_gpio_input(STOP_PB_GPIO);
-    setup_gpio_input(START_PB_GPIO);
-    setup_gpio_input(TAPBOT_RESET_PB_GPIO);
-    setup_gpio_input(CARRIER_RESET_PB_GPIO);
+    setup_gpio_input(TOP_END_LIMIT_GPIO, false, false);
+    setup_gpio_input(STOP_PB_GPIO, false, true);
+    setup_gpio_input(START_PB_GPIO, false, true);
+    setup_gpio_input(TAPBOT_RESET_PB_GPIO, false, true);
+    setup_gpio_input(CARRIER_RESET_PB_GPIO, false, true);
 
     gpio_set_intr_type(STOP_PB_GPIO, GPIO_INTR_NEGEDGE);
     gpio_install_isr_service(0);
