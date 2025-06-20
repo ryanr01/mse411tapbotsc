@@ -165,11 +165,12 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     while (gpio_get_level(limit_gpio) != 1) {
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
+            rmt_enable(motor->rmt_chan);
             gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
             stop_requested = false;
             return;
         }
-        vTaskDelay(1); // Prevent CPU starvation
+        vTaskDelay(1);
     }
 
     rmt_disable(motor->rmt_chan);
@@ -214,6 +215,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", direction ? i * 10 : (int)(cfg->blade_width - i * 10));
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
+                rmt_enable(motor->rmt_chan);
                 gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
                 stop_requested = false;
                 return;
