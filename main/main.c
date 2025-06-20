@@ -242,7 +242,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
 void app_main(void) {
     stepper_motor_t motor1;
     stepper_motor_init(&motor1, 6, 5, 4, 500, 1500, 500, 500, 1500);
-    setup_gpio_input(TOP_END_LIMIT_GPIO, false, false);
+    setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);
     setup_gpio_input(STOP_PB_GPIO, false, true);
     setup_gpio_input(START_PB_GPIO, false, true);
     setup_gpio_input(TAPBOT_RESET_PB_GPIO, false, true);
