@@ -8,6 +8,7 @@
 #include "esp_log.h"
 #include "esp_attr.h"
 #include "stepper_motor_encoder.h"
+#include "recordSample.h"
 
 static volatile bool stop_requested = false;
 
@@ -18,20 +19,24 @@ static void IRAM_ATTR stop_button_isr_handler(void *arg)
 //Define GPIOs
 //Motor Top GPIOs
 #define STEP_MOTOR_GPIO_EN       6
-#define STEP_MOTOR_GPIO_DIR      5
-#define STEP_MOTOR_GPIO_STEP     4
+#define STEP_MOTOR_GPIO_DIR      20
+#define STEP_MOTOR_GPIO_STEP     21
 
 // GPIOs for other outputs
-#define TAPBOT_TAPPER_GPIO      13 // GPIO for tapbot tapper
+// #define TAPBOT_TAPPER_GPIO      13 // This is already set in recordSample.h
 
 //Sensor GPIO inputs
 #define TOP_END_LIMIT_GPIO       7 // GPIO for end limit switch
 
 // Push button GPIOs
-#define STOP_PB_GPIO            12 // GPIO for stop push button
-#define START_PB_GPIO            9 // GPIO for start push button
-#define CARRIER_RESET_PB_GPIO   10 // GPIO for carrier home push button
-#define TAPBOT_RESET_PB_GPIO    11 // GPIO for tapbot home push button  
+#define STOP_PB_GPIO            47 // GPIO for stop push button
+#define START_PB_GPIO            48 // GPIO for start push button
+#define CARRIER_RESET_PB_GPIO   35 // GPIO for carrier home push button
+#define TAPBOT_RESET_PB_GPIO    36 // GPIO for tapbot home push button
+
+// **************************************************
+// See recordSample.h for tapper/mic pin definitions
+// **************************************************
 
 // Define stepper motor parameters
 #define STEP_MOTOR_ENABLE_LEVEL  0 // TMC2209 is enabled on low level(make sure to snip off Diag and one next to it)
@@ -209,7 +214,12 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                     uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
-            // Put tap call here 
+            
+            // Record sample - starts mic, triggers tap solenoid, and saves recording to SD card
+            record_sample(1000, "T", 2.1, 3.6); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
+            // You can also swap the placeholder character for any other label you want that will also be passed to the filename.
+            // Do not change the recording duration (first parameter) unless you know how the function works.
+
             vTaskDelay(pdMS_TO_TICKS(200)); // Delay to allow motor to move
             gpio_set_level(cfg->tapper_gpio, 1);
             vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
