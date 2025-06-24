@@ -7,23 +7,7 @@
 #include "esp_attr.h"
 #include "recordSample.h"
 #include "motor_ops.h"
-//Define GPIOs
-//Motor Top GPIOs
-#define STEP_MOTOR_GPIO_EN       6
-#define STEP_MOTOR_GPIO_DIR      20
-#define STEP_MOTOR_GPIO_STEP     19
-
-// GPIOs for other outputs
-// #define TAPBOT_TAPPER_GPIO      13 // This is already set in recordSample.h
-
-//Sensor GPIO inputs
-#define TOP_END_LIMIT_GPIO       7 // GPIO for end limit switch
-
-// Push button GPIOs
-#define STOP_PB_GPIO            47 // GPIO for stop push button
-#define START_PB_GPIO            48 // GPIO for start push button
-#define CARRIER_RESET_PB_GPIO   35 // GPIO for carrier home push button
-#define TAPBOT_RESET_PB_GPIO    36 // GPIO for tapbot home push button
+#include "pin_config.h"
 
 // **************************************************
 // See recordSample.h for tapper/mic pin definitions
@@ -33,7 +17,15 @@
 
 void app_main(void) {
     stepper_motor_t motor1;
-    stepper_motor_init(&motor1, 6, 5, 4, 500, 1500, 500, 500, 1500);
+    stepper_motor_init(&motor1,
+                       STEP_MOTOR_GPIO_EN,
+                       STEP_MOTOR_GPIO_DIR,
+                       STEP_MOTOR_GPIO_STEP,
+                       500,
+                       1500,
+                       500,
+                       500,
+                       1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);
     setup_gpio_input(STOP_PB_GPIO, false, true);
     setup_gpio_input(START_PB_GPIO, false, true);

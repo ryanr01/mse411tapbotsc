@@ -20,22 +20,7 @@
 #include "esp_timer.h"
 #include "driver/i2s_std.h"
 #include <time.h>
-
-// Initialize solenoid pins
-#define ENB 4
-#define IN3 17
-#define IN4 8
-
-// MIC GPIO Pins
-#define MIC_I2S_CLK_GPIO 40
-#define MIC_I2S_DATA_GPIO 19
-#define MIC_I2S_LRCL 5 // A.k.A. WS "Word Select"
-
-// SPI2 GPIO pins
-#define PIN_NUM_MISO 13
-#define PIN_NUM_MOSI 11
-#define PIN_NUM_CLK  12
-#define PIN_NUM_CS   10
+#include "pin_config.h"
 
 // Recording configuration
 #define MIC_SAMPLE_RATE 48000 // Do not exceed 64000 for SPH0645
