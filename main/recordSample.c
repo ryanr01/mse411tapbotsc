@@ -63,11 +63,8 @@ void fire_solenoid_once(void *pvParameters)
 }
 
 static i2s_chan_handle_t rx_handle;
-static i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
 static int32_t i2s_readraw_buff[SAMPLE_SIZE];
 static size_t bytes_read;
-static const int WAVE_HEADER_SIZE = 44;
-static struct timespec ts;
 
 void record_wav(void *pvParameters)
 {
