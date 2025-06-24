@@ -123,22 +123,21 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
 
     bool direction = !cfg->direction;
     for (int j = 0; j < 5 && !stop_requested; j++) {
-        gpio_set_level(motor->gpio_dir,
+        gpio_set_level(motor -> gpio_dir,
                        direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
 
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
-            if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
+            if( (gpio_get_level(cfg->limit_switch) == 1) && (i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
                 gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
                 break;
             }
             uint32_t n_steps = 1;
-            tx_config.loop_count = 10000;
+            tx_config.loop_count = 8000; // is 8 microsteps, 200 steps per revolution, 2mm pitch, and 10mm distance
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                         uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
 
-            record_sample(1000, "T", 2.1, 3.6);
 
             vTaskDelay(pdMS_TO_TICKS(200));
             gpio_set_level(cfg->tapper_gpio, 1);
@@ -166,4 +165,3 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     }
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 }
-

@@ -7,7 +7,7 @@
 #include "driver/rmt_tx.h"
 #include "driver/gpio.h"
 #include "stepper_motor_encoder.h"
-#include "recordSample.h"
+
 
 // Stepper motor parameter definitions
 #define STEP_MOTOR_ENABLE_LEVEL  0
