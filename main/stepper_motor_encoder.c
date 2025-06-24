@@ -119,6 +119,7 @@ err:
     return ret;
 }
 
+
 typedef struct {
     rmt_encoder_t base;
     rmt_encoder_handle_t copy_encoder;
