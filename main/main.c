@@ -9,11 +9,6 @@
 #include "motor_ops.h"
 #include "pin_config.h"
 
-// **************************************************
-// See recordSample.h for tapper/mic pin definitions
-// **************************************************
-
-
 
 void app_main(void) {
     stepper_motor_t motor1;
