@@ -58,6 +58,7 @@ void app_main(void) {
                 
 
             case STATE_TAPBOT_RESET:
+                ESP_LOGI("StepperMotor", "Resetting tapbot...");
                 carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
                 
                 ESP_LOGI("StepperMotor", "Resetting tapbot...");
@@ -65,6 +66,7 @@ void app_main(void) {
                 break;
 
             case STATE_TAPTEST_SEQUENCE:
+                ESP_LOGI("Tap Test", "Homing carrier...");
                 carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
                 ESP_LOGI("Tap Test", "Starting tap sequence...");
                 tap_sequence(&motor1, &uniform_speed_hz, &side_cfg);
