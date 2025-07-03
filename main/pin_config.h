@@ -6,10 +6,14 @@
 #define IN4 39
 
 // DC motor control pins
-#define DC_MOTOR_IN1 18
-#define DC_MOTOR_IN2 8
-#define DC_MOTOR_IN3 3
-#define DC_MOTOR_IN4 46
+#define MOTOR_IN1 GPIO_NUM_8
+#define MOTOR_IN2 GPIO_NUM_3
+#define MOTOR_IN3 GPIO_NUM_16
+#define MOTOR_IN4 GPIO_NUM_17
+
+// Encorder pins
+#define ENCODER_PIN_A GPIO_NUM_9
+#define ENCODER_PIN_B GPIO_NUM_46
 
 // Microphone I2S pins
 #define MIC_I2S_CLK_GPIO   40
