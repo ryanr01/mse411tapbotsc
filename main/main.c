@@ -48,25 +48,25 @@ void app_main(void) {
                 if (gpio_get_level(START_PB_GPIO)==1) state = STATE_TAPTEST_SEQUENCE;
                 else if (gpio_get_level(CARRIER_RESET_PB_GPIO)==1) state = STATE_CARRIER_HOME;
                 else if (gpio_get_level(TAPBOT_RESET_PB_GPIO)==1) state = STATE_TAPBOT_RESET;
-                ESP_LOGI("StepperMotor", "Waiting for action...");
+                ESP_LOGI("TapBot", "Waiting for action...");
                 break;
 
             case STATE_CARRIER_HOME:
-                ESP_LOGI("StepperMotor", "Homing carrier...");
+                ESP_LOGI("TapBot", "Homing carrier...");
                 if (gpio_get_level(TOP_END_LIMIT_GPIO) == 0) {
                     esp_log_level_set("*", ESP_LOG_INFO);
                     carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
                 }
-                ESP_LOGI("StepperMotor", "Carrier homed.");
+                ESP_LOGI("TapBot", "Carrier homed.");
                 state = STATE_IDLE;
                 break;
                 
 
             case STATE_TAPBOT_RESET:
-                ESP_LOGI("StepperMotor", "Resetting tapbot...");
+                ESP_LOGI("TapBot", "Resetting tapbot...");
                 carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
                 
-                ESP_LOGI("StepperMotor", "Resetting tapbot...");
+                ESP_LOGI("TapBot", "Resetting tapbot...");
                 state = STATE_IDLE;
                 break;
 
