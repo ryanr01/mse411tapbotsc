@@ -76,10 +76,10 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_en, int gpio_dir, int g
     ESP_ERROR_CHECK(rmt_enable(motor->rmt_chan));
 }
 
-void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio) {
+bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio) {
     if (gpio_get_level(limit_gpio) == 1) {
         ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
-        return;
+        return true;
     }
     rmt_transmit_config_t tx_config = {
         .loop_count = 0,
@@ -100,7 +100,7 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
             rmt_enable(motor->rmt_chan);
             gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
             stop_requested = false;
-            return;
+            return false;
         }
         vTaskDelay(1);
     }
@@ -110,6 +110,7 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     ESP_LOGI("StepperMotor", "end limit reached.");
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+    return true;
 }
 
 void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *cfg) {
@@ -125,6 +126,12 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir,
                        direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
+// improve tap logic and add a proper emergency stop also make the home calibrate the total width of blade
+        uint32_t n_steps = 1;
+        tx_config.loop_count = 4000;
+        ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
+                                    uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
+        ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
 
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
             if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
@@ -133,18 +140,16 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
                 break;
             }
             uint32_t n_steps = 1;
-            tx_config.loop_count = 8000;
+            tx_config.loop_count = 4000;
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                         uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
-
-            record_sample(1000, "T", 2.1, 3.6);
 
             vTaskDelay(pdMS_TO_TICKS(200));
             gpio_set_level(cfg->tapper_gpio, 1);
             vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
             gpio_set_level(cfg->tapper_gpio, 0);
-            vTaskDelay(pdMS_TO_TICKS(200));
+            vTaskDelay(pdMS_TO_TICKS(100));
             ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", direction ? i * 10 : (int)(cfg->blade_width - i * 10));
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);

@@ -43,7 +43,7 @@ void solenoid_init(void)
     gpio_set_direction(IN3, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN4, GPIO_MODE_OUTPUT);
     gpio_set_level(ENB, 0);
-    gpio_set_level(IN3, 1);
+    gpio_set_level(IN3, 0);
     gpio_set_level(IN4, 0);
 }
 
@@ -210,9 +210,6 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
 
     ESP_LOGI(TAG, "Filesystem mounted");
     sdmmc_card_print_info(stdout, card);
-
-    init_microphone();
-    solenoid_init();
 
     char xcoordstr[32];
     char ycoordstr[32];

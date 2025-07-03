@@ -5,7 +5,6 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_attr.h"
-#include "recordSample.h"
 #include "motor_ops.h"
 #include "pin_config.h"
 
@@ -26,14 +25,20 @@ void app_main(void) {
     setup_gpio_input(START_PB_GPIO, false, true);
     setup_gpio_input(TAPBOT_RESET_PB_GPIO, false, true);
     setup_gpio_input(CARRIER_RESET_PB_GPIO, false, true);
+    setup_gpio_output(ENB);
+    setup_gpio_output(IN3);
+    setup_gpio_output(IN4);
+    gpio_set_level(ENB, 0);
+    gpio_set_level(IN3, 0);
+    gpio_set_level(IN4, 0);
 
-    gpio_set_intr_type(STOP_PB_GPIO, GPIO_INTR_NEGEDGE);
+    gpio_set_intr_type(STOP_PB_GPIO, GPIO_INTR_POSEDGE);
     gpio_install_isr_service(0);
     gpio_isr_handler_add(STOP_PB_GPIO, stop_button_isr_handler, NULL);
 
     uint32_t uniform_speed_hz = 5000;
 
-    taptest_side_config side_cfg = {100, 1000, TOP_END_LIMIT_GPIO, TAPBOT_RESET_PB_GPIO, 100, 1000, 1};
+    taptest_side_config side_cfg = {160, 1000, TOP_END_LIMIT_GPIO, IN3, 50, 1000, 1};
 
     state_t state = STATE_IDLE;
 
