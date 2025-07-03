@@ -1,4 +1,6 @@
 #include "motor_ops.h"
+#include "motor_driver.h"
+#include "encoder.h"
 #include "esp_log.h"
 #include "driver/rmt_common.h"
 
