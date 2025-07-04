@@ -3,16 +3,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "encoder.h"
-
-#define MOTOR_IN1 GPIO_NUM_8
-#define MOTOR_IN2 GPIO_NUM_3
-#define MOTOR_IN3 GPIO_NUM_16
-#define MOTOR_IN4 GPIO_NUM_17
+#include <math.h>
+#include "pin_config.h"
 
 
-#define COUNTS_PER_REV 2850
-#define WHEEL_DIAMETER_MM 75.0
-#define PI 3.14159265359
+
 
 static float calculate_distance(int position) {
     float circumference = PI * WHEEL_DIAMETER_MM;
@@ -63,33 +58,23 @@ void motor_reverse(void){
 
 
 
-void DCmotordrive(float target_distance_mm, int direction) {
-    // Reset encoder
-    extern void encoder_reset_position(void);
+void DCmotordrive(float target_distance_mm, bool spandir) {
+
     encoder_reset_position();
-if(direction = 1){
 
-
-    // Start motor
-    motor_forward();
-
-}
-
-   if (direction = 0){
-    // Reverse motor
-    motor_reverse();
-
-   }
-
-    // Loop until target distance reached
-    while (1) {
-        float distance = calculate_distance(encoder_get_position());
-        if (distance >= target_distance_mm) {
-            break;
-        }
-        vTaskDelay(pdMS_TO_TICKS(10));  // small delay for CPU efficiency
+    if (spandir) {
+        motor_forward();
+    } else {
+        motor_reverse();
     }
 
-    // Stop motor
+    while (1) {
+        float distance = calculate_distance(encoder_get_position());
+        if (fabs(distance) >= target_distance_mm) {
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
     motor_stop();
 }
