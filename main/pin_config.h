@@ -1,14 +1,23 @@
 #pragma once
+#ifndef CONFIG_H
+#define CONFIG_H
 
+#include "driver/gpio.h"
 // Solenoid control pins
 #define ENB 4
 #define IN3 38
 #define IN4 39
 
+// Wheel & Encoder Constants
+
+#define COUNTS_PER_REV 2525
+#define WHEEL_DIAMETER_MM 80.0
+#define PI 3.14159265359
+
 // DC motor control pins
 #define MOTOR_IN1 GPIO_NUM_8
 #define MOTOR_IN2 GPIO_NUM_3
-#define MOTOR_IN3 GPIO_NUM_16
+#define MOTOR_IN3 GPIO_NUM_18
 #define MOTOR_IN4 GPIO_NUM_17
 
 // Encorder pins
@@ -37,3 +46,5 @@
 #define START_PB_GPIO          47
 #define CARRIER_RESET_PB_GPIO  45
 #define TAPBOT_RESET_PB_GPIO   48
+
+#endif // CONFIG_H
