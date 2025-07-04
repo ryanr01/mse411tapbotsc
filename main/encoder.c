@@ -3,7 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #include "driver/gpio.h"
-#include "config.h"
+#include "pin_config.h"
 
 #define TAG "ENCODER"
 
