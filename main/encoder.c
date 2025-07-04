@@ -1,20 +1,12 @@
-
 #include "encoder.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #include "driver/gpio.h"
+#include "config.h"
 
 #define TAG "ENCODER"
 
-#define COUNTS_PER_REV 2850
-#define WHEEL_DIAMETER_MM 75.0
-#define PI 3.14159265359
-
-#define ENCODER_PIN_A GPIO_NUM_9
-#define ENCODER_PIN_B GPIO_NUM_46
-
-void encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
 
 static volatile int encoder_position = 0;
 static gpio_num_t encoder_pin_a;
