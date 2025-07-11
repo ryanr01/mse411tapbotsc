@@ -55,3 +55,25 @@ void motor_reverse(void){
 
 }
 
+//DC motor and Encoder calls 
+void DCmotordrive(float target_distance_mm, bool spandir) {
+
+    encoder_reset_position();
+
+    if (spandir) {
+        motor_forward();
+    } else {
+        motor_reverse();
+    }
+
+    while (1) {
+        float distance = calculate_distance(encoder_get_position());
+        if (fabs(distance) >= target_distance_mm) {
+            break;
+        }
+        vTaskDelay(pdMS_TO_TICKS(10));
+    }
+
+    motor_stop();
+}
+
