@@ -65,11 +65,14 @@ void DCmotordrive(float target_distance_mm, bool spandir) {
     } else {
         motor_reverse();
     }
+     ESP_LOGI("DC_MOTOR", "Starting movement toward %.2f mm", target_distance_mm);
 
     while (1) {
         float distance = calculate_distance(encoder_get_position());
         if (fabs(distance) >= target_distance_mm) {
+            ESP_LOGI("DC_MOTOR", "Target reached: %.2f mm", distance);
             break;
+    
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
