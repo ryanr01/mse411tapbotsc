@@ -3,6 +3,9 @@
 #include "encoder.h"
 #include "esp_log.h"
 #include "driver/rmt_common.h"
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 
 static volatile bool stop_requested = false;
 
@@ -173,4 +176,6 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     }
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 }
+
+//DC motor and Encoder calls 
 
