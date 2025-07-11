@@ -144,7 +144,26 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
                 gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+                
+                //Encoder and DC Driver movement
+                encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
+                motor_driver_init();
+                //Drive the motor to move 10 mm
+                float target_distance_mm = 10.0f;
+                //Direction, Forward is true, Reverse is false direction
+                  bool spandir = true;
+                    DCmotordrive(target_distance_mm, spandir);
+                    //Print final distance
+                    float final_distance = encoder_get_distance_mm();
+                    int final_position = encoder_get_position();
+
+                    ESP_LOGI("MAIN", "Target: %.2f mm", target_distance_mm);
+                     ESP_LOGI("MAIN", "Final Position: %d counts", final_position);
+                        ESP_LOGI("MAIN", "Final Distance: %.2f mm", final_distance);
                 break;
+
+
+                
             }
             uint32_t n_steps = 1;
             tx_config.loop_count = 4000;
