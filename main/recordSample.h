@@ -335,10 +335,10 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     char ycoordstr[32];
     char timestr[32];
 
-    snprintf(xcoordstr, sizeof(xcoordstr), "%.2f", x_coordinate);
+    snprintf(xcoordstr, sizeof(xcoordstr), "%.1f", x_coordinate);
     replace_char(xcoordstr, '.', '\0');
 
-    snprintf(ycoordstr, sizeof(ycoordstr), "%.2f", y_coordinate);
+    snprintf(ycoordstr, sizeof(ycoordstr), "%.1f", y_coordinate);
     replace_char(ycoordstr, '.', '\0');
 
     snprintf(timestr, sizeof(timestr), "%ld", (long)tv_now.tv_sec);
@@ -354,4 +354,8 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     ESP_LOGI(TAG, "Card unmounted");
 
     spi_bus_free(host.slot);
+
+    // Cleanup I2S to free the controller
+    ESP_ERROR_CHECK(i2s_channel_disable(rx_handle));
+    ESP_ERROR_CHECK(i2s_del_channel(rx_handle));
 }
