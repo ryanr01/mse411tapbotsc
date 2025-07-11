@@ -152,12 +152,16 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
                                         uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
 
-            vTaskDelay(pdMS_TO_TICKS(200));
-            gpio_set_level(cfg->tapper_gpio, 1);
-            vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
-            gpio_set_level(cfg->tapper_gpio, 0);
-            vTaskDelay(pdMS_TO_TICKS(100));
-            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", direction ? i * 10 : (int)(cfg->blade_width - i * 10));
+            //vTaskDelay(pdMS_TO_TICKS(200));
+            //gpio_set_level(cfg->tapper_gpio, 1);
+            //vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
+            //gpio_set_level(cfg->tapper_gpio, 0);
+            float x_coord = (float)j; // Taken as an incremented index for now
+            float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
+            record_sample(1000, "T", x_coord, y_coord); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
+            //vTaskDelay(pdMS_TO_TICKS(100));
+            ESP_LOGI("StepperMotor", "Cord Position X = %dmm", x_coord);
+            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", y_coord);
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
                 rmt_enable(motor->rmt_chan);
