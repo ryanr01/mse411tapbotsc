@@ -3,10 +3,10 @@
 #define CONFIG_H
 
 #include "driver/gpio.h"
-// Solenoid control pins
+// Solenoid pins
 #define ENB 4
-#define IN3 38
-#define IN4 39
+#define IN3 1
+#define IN4 2
 
 // Wheel & Encoder Constants
 
@@ -25,15 +25,17 @@
 #define ENCODER_PIN_B GPIO_NUM_46
 
 // Microphone I2S pins
-#define MIC_I2S_CLK_GPIO   40
-#define MIC_I2S_DATA_GPIO  19
-#define MIC_I2S_LRCL        5
+#define MIC_I2S_CLK_GPIO 40 //  G
+#define MIC_I2S_DATA_GPIO 19 // G
+#define MIC_I2S_LRCL 5 // A.k.A. WS "Word Select"    G
 
-// SPI bus pins for SD card
-#define PIN_NUM_MISO    13
-#define PIN_NUM_MOSI    11
-#define PIN_NUM_CLK     12
-#define PIN_NUM_CS      10
+//SDMMC GPIO Pins
+#define SDMMC_CLK 12
+#define SDMMC_CMD 11
+#define SDMMC_D0 36
+#define SDMMC_D1 37
+#define SDMMC_D2 13
+#define SDMMC_D3_CS 10
 
 // Stepper motor control pins
 #define STEP_MOTOR_GPIO_EN   6
