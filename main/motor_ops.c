@@ -8,6 +8,8 @@
 #include "freertos/task.h"
 #include <math.h>
 #include "pin_config.h"
+#include "recordSample.h"
+#include "stepper_motor_encoder.h"
 
 static volatile bool stop_requested = false;
 
@@ -179,8 +181,8 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
             record_sample(1000, "T", x_coord, y_coord); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
             //vTaskDelay(pdMS_TO_TICKS(100));
-            ESP_LOGI("StepperMotor", "Cord Position X = %dmm", x_coord);
-            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", y_coord);
+            ESP_LOGI("StepperMotor", "Cord Position X = %dmm", (int)x_coord);
+            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", (int)y_coord);
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
                 rmt_enable(motor->rmt_chan);

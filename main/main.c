@@ -5,7 +5,7 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "esp_attr.h"
-#include "motor_drive.h"
+#include "motor_driver.h"
 #include "encoder.h"
 #include "motor_ops.h"
 #include "pin_config.h"

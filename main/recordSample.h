@@ -21,6 +21,7 @@
 #include "esp_timer.h"
 #include "driver/i2s_std.h"
 #include <time.h>
+#include <pin_config.h>
 
 double adjusted_rec_time;
 char elnome[128];

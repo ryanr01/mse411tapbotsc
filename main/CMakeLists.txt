@@ -3,6 +3,9 @@ idf_component_register(
         "main.c"
         "motor_ops.c"
         "stepper_motor_encoder.c"
+        "motor_driver.c"
+        "encoder.c"
+        "recordSample.c"
     PRIV_REQUIRES
         esp_driver_rmt
         esp_driver_gpio
