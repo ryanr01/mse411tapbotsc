@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include <math.h>
+#include "pin_config.h"
 
 static volatile bool stop_requested = false;
 
