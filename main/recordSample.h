@@ -46,7 +46,7 @@ void RTOS_go() {
         0                  // Core 0
     );
 
-    vTaskDelay(150); // Recording buffer
+    //vTaskDelay(150); // Recording buffer
 
     // Create task two on core 1
     //TaskHandle_t fire_handle;
@@ -60,7 +60,7 @@ void RTOS_go() {
         1                  // Core 1
     );
 
-    //vTaskDelay(record_millis + 80); // Wait for recording to finish + added buffer
+    vTaskDelay(record_millis + 80); // Wait for recording to finish + added buffer
     //vTaskDelete(fire_handle);
     //vTaskDelete(record_handle);
 }
@@ -91,9 +91,9 @@ void RTOS_go() {
 //********************************solenoid functions********************************
 void solenoid_init(void)
 {
-    gpio_reset_pin(ENB);
-    gpio_reset_pin(IN3);
-    gpio_reset_pin(IN4);
+    //gpio_reset_pin(ENB);
+    //gpio_reset_pin(IN3);
+    //gpio_reset_pin(IN4);
     gpio_set_direction(ENB, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN3, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN4, GPIO_MODE_OUTPUT);
@@ -108,7 +108,7 @@ void fire_solenoid_once(void * pvParameters)
     gpio_set_level(IN3, 1);
     gpio_set_level(IN4, 0);
    
-    vTaskDelay(pdMS_TO_TICKS(10)); //50 miliseconds down
+    vTaskDelay(pdMS_TO_TICKS(25)); //50 miliseconds down
 
     gpio_set_level(IN3, 0);
     gpio_set_level(IN4, 0);
