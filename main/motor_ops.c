@@ -165,7 +165,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             //gpio_set_level(cfg->tapper_gpio, 0);
             float x_coord = (float)j; // Taken as an incremented index for now
             float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
-            record_sample(1000, "T", 1.1, 2.3); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
+            record_sample(100, "T", 1.1, 2.3); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
             //vTaskDelay(pdMS_TO_TICKS(100));
             ESP_LOGI("StepperMotor", "Cord Position X = %dmm", (int)x_coord);
             ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", (int)y_coord);
@@ -181,7 +181,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
 
 
         }
-                         //Encoder and DC Driver movement
+                //Encoder and DC Driver movement
                 encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
                 motor_driver_init();
                 //Drive the motor to move 10 mm
@@ -200,7 +200,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
 
         direction = !direction;
 
-        vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
+        //vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
             gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);

@@ -40,7 +40,7 @@ void app_main(void) {
 
     uint32_t uniform_speed_hz = 5000;
 
-    taptest_side_config side_cfg = {160, 1000, TOP_END_LIMIT_GPIO, IN3, 50, 1000, 1};
+    taptest_side_config side_cfg = {160, 340, TOP_END_LIMIT_GPIO, IN3, 50, 1000, 1};
 
     state_t state = STATE_IDLE;
 

@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <stdlib.h>fire_solenoid_once
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>
@@ -30,10 +30,12 @@ int record_millis;
 // RTOS configuration
 void record_wav(void * pvParameters);
 void fire_solenoid_once(void * pvParameters);
+TaskHandle_t record_handle;
+TaskHandle_t fire_handle;
 
 void RTOS_go() {
     // Create task one on core 0
-    TaskHandle_t record_handle;
+    //TaskHandle_t record_handle;
     xTaskCreatePinnedToCore(
         record_wav,           // Task function
         "RecordWav",         // Task name
@@ -44,10 +46,10 @@ void RTOS_go() {
         0                  // Core 0
     );
 
-    vTaskDelay(50);
+    vTaskDelay(150); // Recording buffer
 
     // Create task two on core 1
-    TaskHandle_t fire_handle;
+    //TaskHandle_t fire_handle;
     xTaskCreatePinnedToCore(
         fire_solenoid_once,           // Task function
         "FireSolenoidOnce",         // Task name
@@ -58,9 +60,9 @@ void RTOS_go() {
         1                  // Core 1
     );
 
-    vTaskDelay(record_millis + 200); // Wait for recording to finish + added buffer
-    vTaskDelete(fire_handle);
-    vTaskDelete(record_handle);
+    //vTaskDelay(record_millis + 80); // Wait for recording to finish + added buffer
+    //vTaskDelete(fire_handle);
+    //vTaskDelete(record_handle);
 }
 
 // MIC GPIO Pins
@@ -95,23 +97,24 @@ void solenoid_init(void)
     gpio_set_direction(ENB, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN3, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN4, GPIO_MODE_OUTPUT);
-    gpio_set_level(ENB, 0);   
-    gpio_set_level(IN3, 1);
-    gpio_set_level(IN4, 0);
+    //gpio_set_level(ENB, 0);   
+    //gpio_set_level(IN3, 1);
+    //gpio_set_level(IN4, 0);
 }
 void fire_solenoid_once(void * pvParameters)
 {
-    printf("FIRE FIRE FIRE FIRE FIRE FIRE");
+    //printf("FIRE FIRE FIRE FIRE FIRE FIRE");
+    printf("FIRE START");
     gpio_set_level(IN3, 1);
     gpio_set_level(IN4, 0);
-    gpio_set_level(ENB, 1);
-    vTaskDelay(pdMS_TO_TICKS(250)); //250 miliseconds down
+   
+    vTaskDelay(pdMS_TO_TICKS(10)); //50 miliseconds down
 
-    gpio_set_level(ENB, 0);
     gpio_set_level(IN3, 0);
     gpio_set_level(IN4, 0);
-    vTaskDelay(pdMS_TO_TICKS(500)); // 500 miliseconds up
-    while(1);
+    vTaskDelay(pdMS_TO_TICKS(10)); //50 miliseconds down
+    vTaskDelete(fire_handle);
+
 }
 
 #define TAG "SD_SPI"
@@ -149,7 +152,7 @@ void record_wav(void * pvParameters)
     int flash_wr_size = 0;
     ESP_LOGI(TAG, "Opening file");
 
-    uint32_t flash_rec_time = BYTE_RATE * (uint32_t)adjusted_rec_time; // 2/3 multiple tells wav header to be the correct number of bits (we want to exclude redundant bits 19 - 32)
+    uint32_t flash_rec_time = (uint32_t)(BYTE_RATE * adjusted_rec_time); // 2/3 multiple tells wav header to be the correct number of bits (we want to exclude redundant bits 19 - 32)
     const wav_header_t wav_header =
         WAV_HEADER_PCM_DEFAULT(flash_rec_time, MIC_BIT_SAMPLE, MIC_SAMPLE_RATE, NUM_CHANNELS);
 
@@ -349,6 +352,8 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     
     RTOS_go(); // Start record and tap tasks
 
+   
+
     // Unmount card
     esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card);
     ESP_LOGI(TAG, "Card unmounted");
@@ -358,4 +363,9 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     // Cleanup I2S to free the controller
     ESP_ERROR_CHECK(i2s_channel_disable(rx_handle));
     ESP_ERROR_CHECK(i2s_del_channel(rx_handle));
+
+    
+    vTaskDelete(record_handle);
+
+    //vTaskDelay(pdMS_TO_TICKS(500)); // 500 miliseconds up
 }
