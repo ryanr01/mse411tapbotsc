@@ -177,7 +177,11 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
                 return;
             }
 
-               //Encoder and DC Driver movement
+
+
+
+        }
+                         //Encoder and DC Driver movement
                 encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
                 motor_driver_init();
                 //Drive the motor to move 10 mm
@@ -192,7 +196,8 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
                     ESP_LOGI("MAIN", "Target: %.2f mm", target_distance_mm);
                      ESP_LOGI("MAIN", "Final Position: %d counts", final_position);
                         ESP_LOGI("MAIN", "Final Distance: %.2f mm", final_distance);
-        }
+
+
         direction = !direction;
 
         vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
@@ -204,6 +209,8 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
         }
     }
     gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+
+
 }
 
 
