@@ -1,7 +1,7 @@
 #include "tcs3472.h"
 #include "esp_log.h"
 #include "freertos/task.h"
-
+#include "pin_config.h"
 #define TAG "TCS3472"
 
 #define TCS3472_ADDR 0x29
