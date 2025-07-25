@@ -47,12 +47,12 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
     motor->gpio_dir  = gpio_dir;
     motor->gpio_step = gpio_step;
 
-    gpio_config_t en_dir_gpio_config = {
+    gpio_config_t dir_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .intr_type = GPIO_INTR_DISABLE,
-        .pin_bit_mask = (1ULL << gpio_en) | (1ULL << gpio_dir),
+        .pin_bit_mask = (1ULL << gpio_dir),
     };
-    ESP_ERROR_CHECK(gpio_config(&en_dir_gpio_config));
+    ESP_ERROR_CHECK(gpio_config(&dir_gpio_config));
 
     rmt_tx_channel_config_t tx_chan_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
