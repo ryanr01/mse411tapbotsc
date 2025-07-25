@@ -10,6 +10,7 @@
 #include "pin_config.h"
 #include "recordSample.h"
 #include "stepper_motor_encoder.h"
+#include "tcs3472.h"
 #include "lidar.h"
 
 static volatile bool stop_requested = false;
@@ -168,6 +169,15 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
             record_sample(100, "T", 1.1, 2.3); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
             //vTaskDelay(pdMS_TO_TICKS(100));
+            //Record colour
+            ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+            tcs3472_rgbc_data_t color_data;
+        if (tcs3472_read_colors(&color_data) == ESP_OK) {
+            const char* color = tcs3472_detect_color(color_data);
+            printf("Detected color: %s (R:%d G:%d B:%d C:%d)\n", color,
+                   color_data.r, color_data.g, color_data.b, color_data.c);
+        
+            
             ESP_LOGI("StepperMotor", "Cord Position X = %dmm", (int)x_coord);
             ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", (int)y_coord);
             if (stop_requested) {
