@@ -7,6 +7,7 @@ idf_component_register(
         "encoder.c"
         "recordSample.c"
         "lidar.c"
+        "tcs3472.c"
         INCLUDE_DIRS "."
         REQUIRES "vl53l0x"
     PRIV_REQUIRES

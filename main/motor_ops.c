@@ -11,6 +11,7 @@
 #include "recordSample.h"
 #include "stepper_motor_encoder.h"
 #include "tcs3472.h"
+#include "vl53l0x.h"
 #include "lidar.h"
 
 static volatile bool stop_requested = false;
@@ -40,10 +41,9 @@ void setup_gpio_output(int gpio_num) {
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 }
 
-void stepper_motor_init(stepper_motor_t *motor, int gpio_en, int gpio_dir, int gpio_step,
+void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
                         int start_freq_hz, int end_freq_hz, int accel_points, int decel_points,
                         int uniform_speed_hz) {
-    motor->gpio_en   = gpio_en;
     motor->gpio_dir  = gpio_dir;
     motor->gpio_step = gpio_step;
 
@@ -100,7 +100,6 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     };
 
     gpio_set_level(motor->gpio_dir, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
-    gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
     tx_config.loop_count = 1000000;
     ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config));
@@ -109,7 +108,6 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
             rmt_enable(motor->rmt_chan);
-            gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
             stop_requested = false;
             return false;
         }
@@ -120,7 +118,7 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     rmt_enable(motor->rmt_chan);
     ESP_LOGI("StepperMotor", "end limit reached.");
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
-    gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+
     return true;
 }
 
@@ -131,7 +129,6 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             .eot_level = 0
         }
     };
-    gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
 
     bool direction = !cfg->direction;
     for (int j = 0; j < 5 && !stop_requested; j++) {
@@ -147,7 +144,6 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
             if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
-                gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
                 
             
                 break;
@@ -183,7 +179,6 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
                 rmt_enable(motor->rmt_chan);
-                gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
                 stop_requested = false;
                 return;
             }
@@ -214,14 +209,12 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
         //vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
-            gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
             stop_requested = false;
             return;
         }
     }
-    gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
 
 
+    }
 }
-
 

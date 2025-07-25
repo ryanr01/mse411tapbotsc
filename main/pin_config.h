@@ -38,9 +38,8 @@
 #define SDMMC_D3_CS 10
 
 // Stepper motor control pins
-#define STEP_MOTOR_GPIO_EN   6
-#define STEP_MOTOR_GPIO_DIR  15
-#define STEP_MOTOR_GPIO_STEP 16
+#define STEP_MOTOR_GPIO_DIR  2
+#define STEP_MOTOR_GPIO_STEP 1
 
 // Sensor and push button pins
 #define TOP_END_LIMIT_GPIO     7

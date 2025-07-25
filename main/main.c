@@ -15,7 +15,6 @@
 void app_main(void) {
     stepper_motor_t motor1;
     stepper_motor_init(&motor1,
-                       STEP_MOTOR_GPIO_EN,
                        STEP_MOTOR_GPIO_DIR,
                        STEP_MOTOR_GPIO_STEP,
                        500,
@@ -24,10 +23,10 @@ void app_main(void) {
                        500,
                        1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);
-    setup_gpio_input(STOP_PB_GPIO, false, true);
-    setup_gpio_input(START_PB_GPIO, false, true);
-    setup_gpio_input(TAPBOT_RESET_PB_GPIO, false, true);
-    setup_gpio_input(CARRIER_RESET_PB_GPIO, false, true);
+    setup_gpio_input(STOP_PB_GPIO, true, false);
+    setup_gpio_input(START_PB_GPIO, true, false);
+    setup_gpio_input(TAPBOT_RESET_PB_GPIO, true, false);
+    setup_gpio_input(CARRIER_RESET_PB_GPIO, true, false);
     setup_gpio_output(ENB);
     setup_gpio_output(IN3);
     setup_gpio_output(IN4);
