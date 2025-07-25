@@ -49,4 +49,11 @@
 #define CARRIER_RESET_PB_GPIO  45
 #define TAPBOT_RESET_PB_GPIO   48
 
+// Lidar pins
+// Implementation is a little scuffed for now
+// So make sure then pin defs match these in lidar.h
+#define I2C_MASTER_SCL_IO 19
+#define I2C_MASTER_SDA_IO 18
+#define I2C_MASTER_PORT 0
+
 #endif // CONFIG_H

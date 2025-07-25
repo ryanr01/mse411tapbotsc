@@ -9,6 +9,7 @@
 #include "encoder.h"
 #include "motor_ops.h"
 #include "pin_config.h"
+#include "lidar.h"
 
 
 void app_main(void) {

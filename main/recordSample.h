@@ -117,7 +117,7 @@ void fire_solenoid_once(void * pvParameters)
 
 }
 
-#define TAG "SD_SPI"
+static const char *SD_TAG = "SD_SPI";
 #define MOUNT_POINT "/s"
 
 #define MAX_CHAR_SIZE 64
@@ -150,7 +150,7 @@ void record_wav(void * pvParameters)
 {
     // Use POSIX and C standard library functions to work with files.
     int flash_wr_size = 0;
-    ESP_LOGI(TAG, "Opening file");
+    ESP_LOGI(SD_TAG, "Opening file");
 
     uint32_t flash_rec_time = (uint32_t)(BYTE_RATE * adjusted_rec_time); // 2/3 multiple tells wav header to be the correct number of bits (we want to exclude redundant bits 19 - 32)
     const wav_header_t wav_header =
@@ -170,11 +170,11 @@ void record_wav(void * pvParameters)
     }
 
     // Create new WAV file with debug logging
-    ESP_LOGI(TAG, "Attempting to open file: %s", filepath);
+    ESP_LOGI(SD_TAG, "Attempting to open file: %s", filepath);
 
     FILE *f = fopen(filepath, "wb");
     if (f == NULL) {
-        ESP_LOGE(TAG, "Failed to open file for writing");
+        ESP_LOGE(SD_TAG, "Failed to open file for writing");
         return;
     }
 
@@ -214,9 +214,9 @@ void record_wav(void * pvParameters)
      //vTaskDelete( async_tap );
     //}
 
-    ESP_LOGI(TAG, "Recording done!");
+    ESP_LOGI(SD_TAG, "Recording done!");
     fclose(f);
-    ESP_LOGI(TAG, "File written on SDCard");
+    ESP_LOGI(SD_TAG, "File written on SDCard");
     while(1);
 }
 
@@ -254,7 +254,7 @@ void init_microphone(void)
 
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(rx_handle, &std_cfg));
     ESP_ERROR_CHECK(i2s_channel_enable(rx_handle));
-    ESP_LOGI(TAG, "I2S initialized.");
+    ESP_LOGI(SD_TAG, "I2S initialized.");
 }
 
 void replace_char(char *str, char old_char, char new_char) {
@@ -272,13 +272,13 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
 {
     struct timespec tv_now;
     if (clock_gettime(CLOCK_REALTIME, &tv_now) != 0) {
-        ESP_LOGE(TAG, "Failed to get time");
+        ESP_LOGE(SD_TAG, "Failed to get time");
         return;
     }
 
     esp_err_t ret;
 
-    ESP_LOGI(TAG, "Initializing SD card over SPI");
+    ESP_LOGI(SD_TAG, "Initializing SD card over SPI");
 
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     host.slot = SPI2_HOST; // VSPI
@@ -292,7 +292,7 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
 
     ret = spi_bus_initialize(host.slot, &bus_cfg, SDSPI_DEFAULT_DMA);
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
+        ESP_LOGE(SD_TAG, "Failed to initialize SPI bus: %s", esp_err_to_name(ret));
         return;
     }
 
@@ -316,15 +316,15 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     };
 
     sdmmc_card_t *card;
-    ESP_LOGI(TAG, "Mounting filesystem...");
+    ESP_LOGI(SD_TAG, "Mounting filesystem...");
     ret = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot, &mount_config, &card);
 
     if (ret != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to mount filesystem: %s", esp_err_to_name(ret));
+        ESP_LOGE(SD_TAG, "Failed to mount filesystem: %s", esp_err_to_name(ret));
         return;
     }
 
-    ESP_LOGI(TAG, "Filesystem mounted");
+    ESP_LOGI(SD_TAG, "Filesystem mounted");
     sdmmc_card_print_info(stdout, card);
 
     // Initialize microphone
@@ -356,7 +356,7 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
 
     // Unmount card
     esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card);
-    ESP_LOGI(TAG, "Card unmounted");
+    ESP_LOGI(SD_TAG, "Card unmounted");
 
     spi_bus_free(host.slot);
 

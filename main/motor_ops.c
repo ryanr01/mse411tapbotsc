@@ -10,6 +10,7 @@
 #include "pin_config.h"
 #include "recordSample.h"
 #include "stepper_motor_encoder.h"
+#include "lidar.h"
 
 static volatile bool stop_requested = false;
 
