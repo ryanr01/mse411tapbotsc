@@ -7,6 +7,10 @@
 #define ENB 4
 #define IN3 1
 #define IN4 2
+// Bottom solenoid pins
+#define ENB //value
+#define IN5 //pin value
+#define IN6 //pin value
 
 // Wheel & Encoder Constants
 
@@ -29,6 +33,12 @@
 #define MIC_I2S_DATA_GPIO 19 // G
 #define MIC_I2S_LRCL 5 // A.k.A. WS "Word Select"    G
 
+// Bottom Microphone 12S pins
+#define MIC_I2SBOTTOM_CLK_GPIO //40 //  G
+#define MIC_I2SBOTTOM_DATA_GPIO //19 // G
+#define MIC_I2SBOTTOM_LRCL //5 // A.k.A. WS "Word Select"    G
+
+
 //SDMMC GPIO Pins
 #define SDMMC_CLK 12
 #define SDMMC_CMD 11
@@ -41,6 +51,11 @@
 #define STEP_MOTOR_GPIO_DIR  2
 #define STEP_MOTOR_GPIO_STEP 1
 
+// Bottom stepper motor control pins
+#define STEP_MOTOR_GPIO_DIR_BOTTOM  //17  // Example GPIO
+#define STEP_MOTOR_GPIO_STEP_BOTTOM //18  // Example GPIO
+
+
 // Sensor and push button pins
 #define TOP_END_LIMIT_GPIO     7
 #define STOP_PB_GPIO           21
@@ -49,7 +64,6 @@
 #define TAPBOT_RESET_PB_GPIO   48
 
 //Colour pins
-
 #define I2C_PORT I2C_NUM_0
 #define I2C_SDA GPIO_NUM_33
 #define I2C_SCL GPIO_NUM_34

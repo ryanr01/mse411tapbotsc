@@ -66,9 +66,9 @@ void RTOS_go() {
 }
 
 // MIC GPIO Pins
-//#define MICB_I2S_CLK_GPIO 40 //  G
-//#define MICB_I2S_DATA_GPIO 19 // G
-//#define MICB_I2S_LRCL 5 // A.k.A. WS "Word Select"    G
+//#define MIC_I2SBOTTOM_CLK_GPIO 40 //  G
+//#define MIC_I2SBOTTOM_DATA_GPIO 19 // G
+//#define MIC_I2SBOTTOM_LRCL 5 // A.k.A. WS "Word Select"    G
 
 // SPI2 GPIO pins
 // #define PIN_NUM_MISO 13  //  G - 38, OR 13
@@ -240,10 +240,10 @@ void init_microphone(void)
         .slot_cfg.ws_pol = true,
         .gpio_cfg = {
             .mclk = I2S_GPIO_UNUSED,
-            .bclk = MICB_I2S_CLK_GPIO,
-            .ws = MICB_I2S_LRCL,
+            .bclk = MIC_I2SBOTTOM_CLK_GPIO,
+            .ws = MIC_I2SBOTTOM_LRCL,
             .dout = I2S_GPIO_UNUSED,
-            .din = MICB_I2S_DATA_GPIO,
+            .din = MIC_I2SBOTTOM_DATA_GPIO,
             .invert_flags = {
                 .mclk_inv = false,
                 .bclk_inv = false,

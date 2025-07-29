@@ -22,6 +22,17 @@ void app_main(void) {
                        500,
                        500,
                        1500);
+
+
+                           stepper_motor_t steppermotorbottom;
+    stepper_motor_init(&steppermotorbottom,
+                       STEP_MOTOR_GPIO_DIR_BOTTOM,   
+                       STEP_MOTOR_GPIO_STEP_BOTTOM,   
+                       500,
+                       1500,
+                       500,
+                       500,
+                       1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);
     setup_gpio_input(STOP_PB_GPIO, true, false);
     setup_gpio_input(START_PB_GPIO, true, false);
@@ -41,6 +52,10 @@ void app_main(void) {
     uint32_t uniform_speed_hz = 5000;
 
     taptest_side_config side_cfg = {160, 340, TOP_END_LIMIT_GPIO, IN3, 50, 1000, 1};
+
+    taptest_side_config side_cfg_bottom = {160, 340, BOTTOM_END_LIMIT_GPIO, IN5, 50, 1000, 1}; 
+    
+
 
     state_t state = STATE_IDLE;
 
@@ -76,7 +91,7 @@ void app_main(void) {
                 ESP_LOGI("Tap Test", "Homing carrier...");
                 carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
                 ESP_LOGI("Tap Test", "Starting tap sequence...");
-                tap_sequence(&motor1, &uniform_speed_hz, &side_cfg);
+                tap_sequence_dual(&motor1, &steppermotorbottom, &uniform_speed_hz, &uniform_speed_hz, &side_cfg, &side_cfg_bottom);
                 state = STATE_IDLE;
                 break;
 
