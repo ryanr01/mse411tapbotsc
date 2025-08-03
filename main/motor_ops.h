@@ -7,7 +7,7 @@
 #include "driver/rmt_tx.h"
 #include "driver/gpio.h"
 #include "stepper_motor_encoder.h"
-#include "recordSample.h"
+
 
 // Stepper motor parameter definitions
 #define STEP_MOTOR_ENABLE_LEVEL  0
@@ -16,7 +16,6 @@
 #define STEP_MOTOR_RESOLUTION_HZ 1000000
 
 typedef struct {
-    int gpio_en;
     int gpio_dir;
     int gpio_step;
     rmt_channel_handle_t rmt_chan;
@@ -45,11 +44,15 @@ typedef enum {
 
 void setup_gpio_input(int gpio_num, bool pull_up, bool pull_down);
 void setup_gpio_output(int gpio_num);
-void stepper_motor_init(stepper_motor_t *motor, int gpio_en, int gpio_dir, int gpio_step,
+void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
                         int start_freq_hz, int end_freq_hz, int accel_points,
                         int decel_points, int uniform_speed_hz);
-void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio);
+bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio);
 void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *cfg);
+void tap_sequence_dual(stepper_motor_t *steppermotortop, stepper_motor_t *steppermotorbottom,
+                       uint32_t *uniform_speed_hz_top, uint32_t *uniform_speed_hz_bottom,
+                       const taptest_side_config *cfg_top, const taptest_side_config *cfg_bottom);
+
 void IRAM_ATTR stop_button_isr_handler(void *arg);
 
 #endif // MOTOR_OPS_H

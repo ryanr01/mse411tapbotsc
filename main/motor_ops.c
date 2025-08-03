@@ -1,6 +1,18 @@
 #include "motor_ops.h"
+#include "motor_driver.h"
+#include "encoder.h"
 #include "esp_log.h"
 #include "driver/rmt_common.h"
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include <math.h>
+#include "pin_config.h"
+#include "recordSample.h"
+#include "stepper_motor_encoder.h"
+#include "tcs3472.h"
+#include "vl53l0x.h"
+#include "lidar.h"
 
 static volatile bool stop_requested = false;
 
@@ -29,19 +41,19 @@ void setup_gpio_output(int gpio_num) {
     ESP_ERROR_CHECK(gpio_config(&io_conf));
 }
 
-void stepper_motor_init(stepper_motor_t *motor, int gpio_en, int gpio_dir, int gpio_step,
+//Top stepper motor configuration
+void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
                         int start_freq_hz, int end_freq_hz, int accel_points, int decel_points,
                         int uniform_speed_hz) {
-    motor->gpio_en   = gpio_en;
     motor->gpio_dir  = gpio_dir;
     motor->gpio_step = gpio_step;
 
-    gpio_config_t en_dir_gpio_config = {
+    gpio_config_t dir_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .intr_type = GPIO_INTR_DISABLE,
-        .pin_bit_mask = (1ULL << gpio_en) | (1ULL << gpio_dir),
+        .pin_bit_mask = (1ULL << gpio_dir),
     };
-    ESP_ERROR_CHECK(gpio_config(&en_dir_gpio_config));
+    ESP_ERROR_CHECK(gpio_config(&dir_gpio_config));
 
     rmt_tx_channel_config_t tx_chan_config = {
         .clk_src = RMT_CLK_SRC_DEFAULT,
@@ -76,10 +88,11 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_en, int gpio_dir, int g
     ESP_ERROR_CHECK(rmt_enable(motor->rmt_chan));
 }
 
-void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio) {
+//Top carrier home
+bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio) {
     if (gpio_get_level(limit_gpio) == 1) {
         ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
-        return;
+        return true;
     }
     rmt_transmit_config_t tx_config = {
         .loop_count = 0,
@@ -89,7 +102,6 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     };
 
     gpio_set_level(motor->gpio_dir, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
-    gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
     tx_config.loop_count = 1000000;
     ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config));
@@ -98,9 +110,8 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
             rmt_enable(motor->rmt_chan);
-            gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
             stop_requested = false;
-            return;
+            return false;
         }
         vTaskDelay(1);
     }
@@ -109,9 +120,11 @@ void carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
     rmt_enable(motor->rmt_chan);
     ESP_LOGI("StepperMotor", "end limit reached.");
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
-    gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+
+    return true;
 }
 
+//Top tap_sequence
 void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *cfg) {
     rmt_transmit_config_t tx_config = {
         .loop_count = 0,
@@ -119,51 +132,191 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             .eot_level = 0
         }
     };
-    gpio_set_level(motor->gpio_en, STEP_MOTOR_ENABLE_LEVEL);
 
     bool direction = !cfg->direction;
     for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir,
                        direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
 
+
+        // improve tap logic and add a proper emergency stop also make the home calibrate the total width of blade
+        uint32_t n_steps = 1;
+        tx_config.loop_count = 4000;
+        ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
+                                    uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
+        ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
+
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
             if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
-                gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+                
+            
                 break;
+
+
+                
             }
             uint32_t n_steps = 1;
-            tx_config.loop_count = 10000;
+            tx_config.loop_count = 4000;
             ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                         uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
 
-            record_sample(1000, "T", 2.1, 3.6);
-
-            vTaskDelay(pdMS_TO_TICKS(200));
-            gpio_set_level(cfg->tapper_gpio, 1);
-            vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
-            gpio_set_level(cfg->tapper_gpio, 0);
-            vTaskDelay(pdMS_TO_TICKS(200));
-            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", direction ? i * 10 : (int)(cfg->blade_width - i * 10));
+            //vTaskDelay(pdMS_TO_TICKS(200));
+            //gpio_set_level(cfg->tapper_gpio, 1);
+            //vTaskDelay(pdMS_TO_TICKS(cfg->tap_duration));
+            //gpio_set_level(cfg->tapper_gpio, 0);
+            float x_coord = (float)j; // Taken as an incremented index for now
+            float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
+            record_sample(100, "T", 1.1, 2.3); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
+            //vTaskDelay(pdMS_TO_TICKS(100));
+           
+            //Record colour
+            ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+            tcs3472_rgbc_data_t color_data;
+        if (tcs3472_read_colors(&color_data) == ESP_OK) {
+            const char* color = tcs3472_detect_color(color_data);
+            printf("Detected color: %s (R:%d G:%d B:%d C:%d)\n", color,
+                   color_data.r, color_data.g, color_data.b, color_data.c);
+        
+            
+            ESP_LOGI("StepperMotor", "Cord Position X = %dmm", (int)x_coord);
+            ESP_LOGI("StepperMotor", "Cord Position Y = %dmm", (int)y_coord);
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
                 rmt_enable(motor->rmt_chan);
-                gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
                 stop_requested = false;
                 return;
             }
+
+
+
+
         }
+                //Encoder and DC Driver movement
+                encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
+                motor_driver_init();
+                //Drive the motor to move 10 mm
+                float target_distance_mm = 10.0f;
+                //Direction, Forward is true, Reverse is false direction
+                  bool spandir = true;
+                    DCmotordrive(target_distance_mm, spandir);
+                    //Print final distance
+                    float final_distance = encoder_get_distance_mm();
+                    int final_position = encoder_get_position();
+
+                    ESP_LOGI("MAIN", "Target: %.2f mm", target_distance_mm);
+                     ESP_LOGI("MAIN", "Final Position: %d counts", final_position);
+                        ESP_LOGI("MAIN", "Final Distance: %.2f mm", final_distance);
+
+
         direction = !direction;
 
-        vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
+        //vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
-            gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
             stop_requested = false;
             return;
         }
     }
-    gpio_set_level(motor->gpio_en, !STEP_MOTOR_ENABLE_LEVEL);
+
+
+    }
 }
+
+//dual tap sequence
+void tap_sequence_dual(stepper_motor_t *steppermotortop, stepper_motor_t *steppermotorbottom,
+                       uint32_t *uniform_speed_hz_top, uint32_t *uniform_speed_hz_bottom,
+                       const taptest_side_config *cfg_top, const taptest_side_config *cfg_bottom) 
+{
+    rmt_transmit_config_t tx_config_top = { .loop_count = 0, .flags = { .eot_level = 0 } };
+    rmt_transmit_config_t tx_config_bottom = { .loop_count = 0, .flags = { .eot_level = 0 } };
+
+    bool direction = !cfg_top->direction;
+    for (int j = 0; j < 5 && !stop_requested; j++) {
+        gpio_set_level(steppermotortop->gpio_dir, direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
+        gpio_set_level(steppermotorbottom->gpio_dir, direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
+
+        uint32_t n_steps = 1;
+        tx_config_top.loop_count = 4000;
+        tx_config_bottom.loop_count = 4000;
+
+        // Move both motors
+        ESP_ERROR_CHECK(rmt_transmit(steppermotortop->rmt_chan, steppermotortop->uniform_encoder, uniform_speed_hz_top, n_steps * sizeof(uint32_t), &tx_config_top));
+        ESP_ERROR_CHECK(rmt_transmit(steppermotorbottom->rmt_chan, steppermotorbottom->uniform_encoder, uniform_speed_hz_bottom, n_steps * sizeof(uint32_t), &tx_config_bottom));
+        ESP_ERROR_CHECK(rmt_tx_wait_all_done(steppermotortop->rmt_chan, -1));
+        ESP_ERROR_CHECK(rmt_tx_wait_all_done(steppermotorbottom->rmt_chan, -1));
+
+        for (int i = 0; i < (cfg_top->blade_width / 10) && !stop_requested; i++) {
+            if ((gpio_get_level(cfg_top->limit_switch) == 1) && (i > 1 && i < 0.9 * cfg_top->blade_lenght / 10)) {
+                ESP_LOGI("StepperMotor", "End limit switch triggered, stopping dual tap sequence.");
+                break;
+            }
+	   unit32_t n_steps = 1;
+            tx_config_top.loop_count = 4000;
+            tx_config_bottom.loop_count = 4000;
+            ESP_ERROR_CHECK(rmt_transmit(steppermotortop->rmt_chan, steppermotortop->uniform_encoder, uniform_speed_hz_top, n_steps * sizeof(uint32_t), &tx_config_top));
+            ESP_ERROR_CHECK(rmt_transmit(steppermotorbottom->rmt_chan, steppermotorbottom->uniform_encoder, uniform_speed_hz_bottom, n_steps * sizeof(uint32_t), &tx_config_bottom));
+            ESP_ERROR_CHECK(rmt_tx_wait_all_done(steppermotortop->rmt_chan, -1));
+            ESP_ERROR_CHECK(rmt_tx_wait_all_done(steppermotorbottom->rmt_chan, -1));
+
+            // Record for top
+            float x_coord_top = (float)j;
+            float y_coord_top = (float)(direction ? i * 10 : (int)(cfg_top->blade_width - i * 10));
+            record_sample(100, "T", x_coord_top, y_coord_top);
+
+	    //Record colour
+            ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+            tcs3472_rgbc_data_t color_data;
+    		    if (tcs3472_read_colors(&color_data) == ESP_OK) {
+            		const char* color = tcs3472_detect_color(color_data);
+            		printf("Detected color: %s (R:%d G:%d B:%d C:%d)\n", color, color_data.r, color_data.g, color_data.b, color_data.c);
+        	
+
+            // Record for bottom
+            float x_coord_bottom = (float)j;
+            float y_coord_bottom = (float)(direction ? i * 10 : (int)(cfg_bottom->blade_width - i * 10));
+            record_samplebottom(100, "T", x_coord_bottom, y_coord_bottom);
+	
+	ESP
+		
+            if (stop_requested) {
+                rmt_disable(steppermotortop->rmt_chan);
+                rmt_disable(steppermotorbottom->rmt_chan);
+                rmt_enable(steppermotortop->rmt_chan);
+                rmt_enable(steppermotorbottom->rmt_chan);
+                stop_requested = false;
+                return;
+            }
+        }
+
+//Encoder and DC Driver movement
+                encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
+                motor_driver_init();
+                //Drive the motor to move 10 mm
+                float target_distance_mm = 10.0f;
+                //Direction, Forward is true, Reverse is false direction
+                  bool spandir = true;
+                    DCmotordrive(target_distance_mm, spandir);
+                    //Print final distance
+                    float final_distance = encoder_get_distance_mm();
+                    int final_position = encoder_get_position();
+
+                    ESP_LOGI("MAIN", "Target: %.2f mm", target_distance_mm);
+                     ESP_LOGI("MAIN", "Final Position: %d counts", final_position);
+                        ESP_LOGI("MAIN", "Final Distance: %.2f mm", final_distance);
+
+        direction = !direction;
+		//vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
+        if (stop_requested) {
+            rmt_disable(motor->rmt_chan);
+            stop_requested = false;
+            return;
+        }
+
+    }
+}
+
+}
+
 

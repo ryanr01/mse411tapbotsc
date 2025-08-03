@@ -10,11 +10,9 @@
 #include "driver/gpio.h"
 #include "esp_log.h" 
 #include "stepper_motor_encoder.h"
+#include "pin_config.h"
 
 ///////////////////////////////Change the following configurations according to your board//////////////////////////////
-#define STEP_MOTOR_GPIO_EN       6
-#define STEP_MOTOR_GPIO_DIR      5
-#define STEP_MOTOR_GPIO_STEP     4
 #define STEP_MOTOR_ENABLE_LEVEL  0 // DRV8825 is enabled on low level
 #define STEP_MOTOR_SPIN_DIR_CLOCKWISE 0
 #define STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE !STEP_MOTOR_SPIN_DIR_CLOCKWISE
