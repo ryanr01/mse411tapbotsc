@@ -14,7 +14,6 @@
 void app_main(void) {
     stepper_motor_t motor1;
     stepper_motor_init(&motor1,
-                       STEP_MOTOR_GPIO_EN,
                        STEP_MOTOR_GPIO_DIR,
                        STEP_MOTOR_GPIO_STEP,
                        500,

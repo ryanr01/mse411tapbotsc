@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdlib.h>fire_solenoid_once
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/unistd.h>

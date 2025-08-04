@@ -27,7 +27,6 @@ void app_main(void)
     gpio_config_t en_dir_gpio_config = {
         .mode = GPIO_MODE_OUTPUT,
         .intr_type = GPIO_INTR_DISABLE,
-        .pin_bit_mask = 1ULL << STEP_MOTOR_GPIO_DIR | 1ULL << STEP_MOTOR_GPIO_EN,
     };
     ESP_ERROR_CHECK(gpio_config(&en_dir_gpio_config));
 
@@ -45,7 +44,7 @@ void app_main(void)
     ESP_LOGI(TAG, "Set spin direction");
     gpio_set_level(STEP_MOTOR_GPIO_DIR, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
     ESP_LOGI(TAG, "Enable step motor");
-    gpio_set_level(STEP_MOTOR_GPIO_EN, STEP_MOTOR_ENABLE_LEVEL);
+
 
     ESP_LOGI(TAG, "Create motor encoders");
     stepper_motor_curve_encoder_config_t accel_encoder_config = {

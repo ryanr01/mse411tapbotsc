@@ -16,7 +16,6 @@
 #define STEP_MOTOR_RESOLUTION_HZ 1000000
 
 typedef struct {
-    int gpio_en;
     int gpio_dir;
     int gpio_step;
     rmt_channel_handle_t rmt_chan;
@@ -45,7 +44,7 @@ typedef enum {
 
 void setup_gpio_input(int gpio_num, bool pull_up, bool pull_down);
 void setup_gpio_output(int gpio_num);
-void stepper_motor_init(stepper_motor_t *motor, int gpio_en, int gpio_dir, int gpio_step,
+void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
                         int start_freq_hz, int end_freq_hz, int accel_points,
                         int decel_points, int uniform_speed_hz);
 bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio);

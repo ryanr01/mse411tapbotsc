@@ -10,8 +10,8 @@
     "IDF_TARGET": "esp32s3"
   },
   "idf.flashType": "UART",
-  "idf.monitorPort": "COM10",
-  "idf.portWin": "COM10",
+  "idf.monitorPort": "COM15",
+  "idf.portWin": "COM15",
   "files.associations": {
     "*.inc": "c",
     "atomic": "c",
