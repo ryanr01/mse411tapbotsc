@@ -14,8 +14,7 @@
 
 static volatile bool stop_requested = false;
 
-void IRAM_ATTR stop_button_isr_handler(void *arg)
-{
+void IRAM_ATTR stop_button_isr_handler(void *arg){
     stop_requested = true;
 }
 
@@ -40,14 +39,19 @@ void setup_gpio_output(int gpio_num) {
 }
 
 void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
-                        int start_freq_hz, int end_freq_hz, int accel_points, int decel_points,
-                        int uniform_speed_hz) {
+                        int start_freq_hz, int end_freq_hz,
+                        int accel_points, int decel_points,
+                        int uniform_speed_hz)
+{
     motor->gpio_dir  = gpio_dir;
     motor->gpio_step = gpio_step;
 
     gpio_config_t en_dir_gpio_config = {
+        .pin_bit_mask = 1ULL << gpio_dir,
         .mode = GPIO_MODE_OUTPUT,
-        .intr_type = GPIO_INTR_DISABLE
+        .pull_up_en   = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
     };
     ESP_ERROR_CHECK(gpio_config(&en_dir_gpio_config));
 
@@ -203,9 +207,5 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             return;
         }
     }
-
-
-
 }
-
 }

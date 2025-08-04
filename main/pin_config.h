@@ -45,7 +45,6 @@
 #define TOP_END_LIMIT_GPIO     7
 #define STOP_PB_GPIO           21
 #define START_PB_GPIO          47
-#define CARRIER_RESET_PB_GPIO  45
 #define TAPBOT_RESET_PB_GPIO   48
 
 // //Colour pins

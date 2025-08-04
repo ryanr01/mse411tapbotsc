@@ -13,7 +13,7 @@
 
 void app_main(void) {
     stepper_motor_t motor1;
-    stepper_motor_init(&motor1,
+    stepper_motor_init(&motor1, 
                        STEP_MOTOR_GPIO_DIR,
                        STEP_MOTOR_GPIO_STEP,
                        500,
@@ -25,7 +25,6 @@ void app_main(void) {
     setup_gpio_input(STOP_PB_GPIO, false, true);
     setup_gpio_input(START_PB_GPIO, false, true);
     setup_gpio_input(TAPBOT_RESET_PB_GPIO, false, true);
-    setup_gpio_input(CARRIER_RESET_PB_GPIO, false, true);
     setup_gpio_output(ENB);
     setup_gpio_output(IN3);
     setup_gpio_output(IN4);
@@ -47,19 +46,8 @@ void app_main(void) {
         switch (state) {
             case STATE_IDLE:
                 if (gpio_get_level(START_PB_GPIO)==1) state = STATE_TAPTEST_SEQUENCE;
-                else if (gpio_get_level(CARRIER_RESET_PB_GPIO)==1) state = STATE_CARRIER_HOME;
                 else if (gpio_get_level(TAPBOT_RESET_PB_GPIO)==1) state = STATE_TAPBOT_RESET;
                 ESP_LOGI("TapBot", "Waiting for action...");
-                break;
-
-            case STATE_CARRIER_HOME:
-                ESP_LOGI("TapBot", "Homing carrier...");
-                if (gpio_get_level(TOP_END_LIMIT_GPIO) == 0) {
-                    esp_log_level_set("*", ESP_LOG_INFO);
-                    carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
-                }
-                ESP_LOGI("TapBot", "Carrier homed.");
-                state = STATE_IDLE;
                 break;
                 
 
