@@ -22,9 +22,9 @@ void app_main(void) {
                        500,
                        1500);
     setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);
-    setup_gpio_input(STOP_PB_GPIO, false, true);
-    setup_gpio_input(START_PB_GPIO, false, true);
-    setup_gpio_input(TAPBOT_RESET_PB_GPIO, false, true);
+    setup_gpio_input(STOP_PB_GPIO, true, false);
+    setup_gpio_input(START_PB_GPIO, true, false);
+    setup_gpio_input(TAPBOT_RESET_PB_GPIO, true, false);
     setup_gpio_output(ENB);
     setup_gpio_output(IN3);
     setup_gpio_output(IN4);
@@ -32,7 +32,7 @@ void app_main(void) {
     gpio_set_level(IN3, 0);
     gpio_set_level(IN4, 0);
 
-    gpio_set_intr_type(STOP_PB_GPIO, GPIO_INTR_POSEDGE);
+    gpio_set_intr_type(STOP_PB_GPIO, GPIO_INTR_NEGEDGE);
     gpio_install_isr_service(0);
     gpio_isr_handler_add(STOP_PB_GPIO, stop_button_isr_handler, NULL);
 
@@ -45,8 +45,8 @@ void app_main(void) {
     while (1) {
         switch (state) {
             case STATE_IDLE:
-                if (gpio_get_level(START_PB_GPIO)==1) state = STATE_TAPTEST_SEQUENCE;
-                else if (gpio_get_level(TAPBOT_RESET_PB_GPIO)==1) state = STATE_TAPBOT_RESET;
+                if (gpio_get_level(START_PB_GPIO)==0) state = STATE_TAPTEST_SEQUENCE;
+                else if (gpio_get_level(TAPBOT_RESET_PB_GPIO)==0) state = STATE_TAPBOT_RESET;
                 ESP_LOGI("TapBot", "Waiting for action...");
                 break;
                 

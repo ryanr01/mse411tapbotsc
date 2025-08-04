@@ -36,7 +36,6 @@ typedef struct {
 
 typedef enum {
     STATE_IDLE,
-    STATE_CARRIER_HOME,
     STATE_TAPBOT_RESET,
     STATE_TAPTEST_SEQUENCE,
     STATE_DONE
