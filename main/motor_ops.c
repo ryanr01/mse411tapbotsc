@@ -10,6 +10,7 @@
 #include "pin_config.h"
 #include "recordSample.h"
 #include "stepper_motor_encoder.h"
+#include "tcs3472.h"
 
 
 static volatile bool stop_requested = false;
@@ -159,6 +160,14 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             record_sample(100, "T", x_coord, y_coord); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
 
             //Record colour
+                        //Record colour
+            ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+            tcs3472_rgbc_data_t color_data;
+            if (tcs3472_read_colors(&color_data) == ESP_OK) {
+                const char* color = tcs3472_detect_color(color_data);
+                printf("Detected color: %s (R:%d G:%d B:%d C:%d)\n", color,
+                    color_data.r, color_data.g, color_data.b, color_data.c);
+
 
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
