@@ -88,8 +88,8 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
     ESP_ERROR_CHECK(rmt_enable(motor->rmt_chan));
 }
 
-bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio) {
-    if (gpio_get_level(limit_gpio) == 1) {
+bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *side_cfg) {
+    if (gpio_get_level(side_cfg->limit_switch) == 1) {
         ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
         return true;
     }
@@ -100,13 +100,13 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t
         }
     };
 
-    gpio_set_level(motor->gpio_dir, STEP_MOTOR_SPIN_DIR_CLOCKWISE);
+    gpio_set_level(motor->gpio_dir, side_cfg->direction);
 
     tx_config.loop_count = 1000000;
     ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config));
 
-    while (gpio_get_level(limit_gpio) != 1) {
+    while (gpio_get_level(side_cfg->limit_switch) != 1) {
         if (stop_requested) {
             rmt_disable(motor->rmt_chan);
             rmt_enable(motor->rmt_chan);
@@ -136,7 +136,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     bool direction = !cfg->direction;
     for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir,
-                       direction ? STEP_MOTOR_SPIN_DIR_CLOCKWISE : STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE);
+                       direction);
 // improve tap logic and add a proper emergency stop also make the home calibrate the total width of blade
         uint32_t n_steps = 1;
         tx_config.loop_count = 4000;

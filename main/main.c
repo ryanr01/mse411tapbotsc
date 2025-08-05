@@ -53,7 +53,7 @@ void app_main(void) {
 
             case STATE_TAPBOT_RESET:
                 ESP_LOGI("TapBot", "Resetting tapbot...");
-                carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
+                carrier_home(&motor1, &uniform_speed_hz, &side_cfg);
                 
                 ESP_LOGI("TapBot", "Resetting tapbot...");
                 state = STATE_IDLE;
@@ -61,7 +61,7 @@ void app_main(void) {
 
             case STATE_TAPTEST_SEQUENCE:
                 ESP_LOGI("Tap Test", "Homing carrier...");
-                carrier_home(&motor1, &uniform_speed_hz, TOP_END_LIMIT_GPIO);
+                carrier_home(&motor1, &uniform_speed_hz, &side_cfg);
                 ESP_LOGI("Tap Test", "Starting tap sequence...");
                 tap_sequence(&motor1, &uniform_speed_hz, &side_cfg);
                 state = STATE_IDLE;

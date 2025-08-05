@@ -46,7 +46,7 @@ void setup_gpio_output(int gpio_num);
 void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
                         int start_freq_hz, int end_freq_hz, int accel_points,
                         int decel_points, int uniform_speed_hz);
-bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, gpio_num_t limit_gpio);
+bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *side_cfg);
 void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *cfg);
 void IRAM_ATTR stop_button_isr_handler(void *arg);
 
