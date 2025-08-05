@@ -10,6 +10,7 @@ idf_component_register(
         esp_driver_rmt
         esp_driver_gpio
         esp_driver_i2s
+        esp_driver_i2c
         fatfs
         sdmmc
         esp_timer
