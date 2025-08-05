@@ -143,7 +143,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir,
                        direction);
-// improve tap logic and add a proper emergency stop also make the home calibrate the total width of blade
+        
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
             if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
@@ -156,7 +156,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
             float x_coord = (float)j; // Taken as an incremented index for now
             float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
-            record_sample(100, "T", 1.1, 2.3); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
+            record_sample(100, "T", x_coord, y_coord); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
 
             //Record colour
 
