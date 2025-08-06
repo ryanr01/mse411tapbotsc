@@ -134,19 +134,22 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
         }
     };
     bool direction = !cfg->direction;
-    gpio_set_level(motor->gpio_dir,
-                       direction);
+    gpio_set_level(motor->gpio_dir, direction);
     uint32_t n_steps = 1;
     tx_config.loop_count = 4000;
     ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder,
                                 uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
+
+    // Initialize the colour sensor once before scanning
+    ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+
     for (int j = 0; j < 5 && !stop_requested; j++) {
-        gpio_set_level(motor->gpio_dir,
-                       direction);
-        
+        gpio_set_level(motor->gpio_dir, direction);
+
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
-            if( (gpio_get_level(cfg->limit_switch) == 1) &&(i>1&&i<0.9*cfg->blade_lenght/10)) {
+            if ((gpio_get_level(cfg->limit_switch) == 1) &&
+                (i > 1 && i < 0.9 * cfg->blade_lenght / 10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
                 break;
             }
@@ -157,17 +160,15 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
             float x_coord = (float)j; // Taken as an incremented index for now
             float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
-            record_sample(100, "T", x_coord, y_coord); // Call record_sample, swap the placeholder values for actual coordinates to save where the data was taken as part of the filename
+            record_sample(100, "T", x_coord, y_coord); // Record where the data was taken
 
-            //Record colour
-                        //Record colour
-            ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+            // Record colour
             tcs3472_rgbc_data_t color_data;
             if (tcs3472_read_colors(&color_data) == ESP_OK) {
-                const char* color = tcs3472_detect_color(color_data);
+                const char *color = tcs3472_detect_color(color_data);
                 printf("Detected color: %s (R:%d G:%d B:%d C:%d)\n", color,
-                    color_data.r, color_data.g, color_data.b, color_data.c);
-
+                       color_data.r, color_data.g, color_data.b, color_data.c);
+            }
 
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
@@ -176,28 +177,24 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
                 return;
             }
         }
-    direction = !direction;
-    //Encoder and DC Driver movement
-    encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
-    motor_driver_init();
-    //Drive the motor to move 10 mm
-    float target_distance_mm = 10.0f;
-    //Direction, Forward is true, Reverse is false direction
-    bool spandir = true;
-    DCmotordrive(target_distance_mm, spandir);
-    //Print final distance
-    float final_distance = encoder_get_distance_mm();
-    int final_position = encoder_get_position();
-    ESP_LOGI("MAIN", "Target: %.2f mm", target_distance_mm);
-    ESP_LOGI("MAIN", "Final Position: %d counts", final_position);
-    ESP_LOGI("MAIN", "Final Distance: %.2f mm", final_distance);
-    //vTaskDelay(pdMS_TO_TICKS(cfg->recording_duration));
-    if (stop_requested) {
-        rmt_disable(motor->rmt_chan);
 
-        stop_requested = false;
-        return;
+        direction = !direction;
+
+        // Encoder and DC Driver movement
+        encoder_init(ENCODER_PIN_A, ENCODER_PIN_B);
+        motor_driver_init();
+        float target_distance_mm = 10.0f;
+        bool spandir = true;
+        DCmotordrive(target_distance_mm, spandir);
+        float final_distance = encoder_get_distance_mm();
+        int final_position = encoder_get_position();
+        ESP_LOGI("MAIN", "Target: %.2f mm", target_distance_mm);
+        ESP_LOGI("MAIN", "Final Position: %d counts", final_position);
+        ESP_LOGI("MAIN", "Final Distance: %.2f mm", final_distance);
+        if (stop_requested) {
+            rmt_disable(motor->rmt_chan);
+            stop_requested = false;
+            return;
+        }
     }
-    
-}
 }

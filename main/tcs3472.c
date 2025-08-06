@@ -1,7 +1,6 @@
 #include "tcs3472.h"
 #include "esp_log.h"
 #include "freertos/task.h"
-#include "pin_config.h"
 #define TAG "TCS3472"
 
 #define TCS3472_ADDR 0x29
@@ -13,25 +12,31 @@
 #define CONTROL_REG 0x0F
 #define CDATAL 0x14
 
-static i2c_port_t i2c_port_used;
+static i2c_master_bus_handle_t i2c_bus;
+static i2c_master_dev_handle_t i2c_dev;
 
 static esp_err_t write_register(uint8_t reg, uint8_t value) {
     uint8_t data[2] = {TCS_CMD_BIT | reg, value};
-    return i2c_master_write_to_device(i2c_port_used, TCS3472_ADDR, data, 2, pdMS_TO_TICKS(100));
+    return i2c_master_transmit(i2c_dev, data, sizeof(data), -1);
 }
 
-esp_err_t tcs3472_init(i2c_port_t port, gpio_num_t sda, gpio_num_t scl) {
-    i2c_port_used = port;
-    i2c_config_t conf = {
-        .mode = I2C_MODE_MASTER,
+esp_err_t tcs3472_init(i2c_port_num_t port, gpio_num_t sda, gpio_num_t scl) {
+    i2c_master_bus_config_t bus_conf = {
+        .i2c_port = port,
         .sda_io_num = sda,
         .scl_io_num = scl,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_FREQ_HZ,
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .glitch_ignore_cnt = 7,
+        .flags = {.enable_internal_pullup = true},
     };
-    ESP_ERROR_CHECK(i2c_param_config(port, &conf));
-    ESP_ERROR_CHECK(i2c_driver_install(port, I2C_MODE_MASTER, 0, 0, 0));
+    ESP_ERROR_CHECK(i2c_new_master_bus(&bus_conf, &i2c_bus));
+
+    i2c_device_config_t dev_conf = {
+        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+        .device_address = TCS3472_ADDR,
+        .scl_speed_hz = I2C_FREQ_HZ,
+    };
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_bus, &dev_conf, &i2c_dev));
 
     vTaskDelay(pdMS_TO_TICKS(10));
     ESP_ERROR_CHECK(write_register(ENABLE_REG, 0x03));     // Power on, ADC enabled
@@ -45,7 +50,7 @@ esp_err_t tcs3472_read_colors(tcs3472_rgbc_data_t *data) {
     uint8_t reg = TCS_CMD_BIT | CDATAL;
     uint8_t buf[8];
 
-    esp_err_t err = i2c_master_write_read_device(i2c_port_used, TCS3472_ADDR, &reg, 1, buf, 8, pdMS_TO_TICKS(100));
+    esp_err_t err = i2c_master_transmit_receive(i2c_dev, &reg, 1, buf, 8, -1);
     if (err != ESP_OK) return err;
 
     data->c = buf[1] << 8 | buf[0];
