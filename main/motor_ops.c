@@ -146,7 +146,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
 
     // Initialize the colour sensor once before scanning
-    ESP_ERROR_CHECK(tcs3472_init(I2C_PORT, I2C_SDA, I2C_SCL));
+    ESP_ERROR_CHECK(tcs3472_init(I2C_SDA, I2C_SCL));
 
     for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir, direction);

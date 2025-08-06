@@ -10,7 +10,7 @@ typedef struct {
     uint16_t c;
 } tcs3472_rgbc_data_t;
 
-esp_err_t tcs3472_init(i2c_port_num_t port, gpio_num_t sda, gpio_num_t scl);
+esp_err_t tcs3472_init(gpio_num_t sda, gpio_num_t scl);
 esp_err_t tcs3472_read_colors(tcs3472_rgbc_data_t *data);
 const char* tcs3472_detect_color(tcs3472_rgbc_data_t data);
 

@@ -49,9 +49,9 @@
 
 // //Colour pins
 
-#define I2C_PORT I2C_NUM_0
-#define I2C_SDA GPIO_NUM_33
-#define I2C_SCL GPIO_NUM_34
+
+#define I2C_SDA GPIO_NUM_45
+#define I2C_SCL GPIO_NUM_35
 
 // // Lidar pins
 // // Implementation is a little scuffed for now

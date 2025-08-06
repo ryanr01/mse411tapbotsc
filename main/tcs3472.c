@@ -21,9 +21,9 @@ static esp_err_t write_register(uint8_t reg, uint8_t value) {
     return i2c_master_transmit(i2c_dev, data, sizeof(data), -1);
 }
 
-esp_err_t tcs3472_init(i2c_port_num_t port, gpio_num_t sda, gpio_num_t scl) {
+esp_err_t tcs3472_init(gpio_num_t sda, gpio_num_t scl) {
     i2c_master_bus_config_t bus_conf = {
-        .i2c_port = port,
+        
         .sda_io_num = sda,
         .scl_io_num = scl,
         .clk_source = I2C_CLK_SRC_DEFAULT,
