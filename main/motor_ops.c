@@ -40,12 +40,16 @@ void setup_gpio_output(int gpio_num) {
 }
 
 void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
+                        int limit_switch, int tapper_gpio, bool direction,
                         int start_freq_hz, int end_freq_hz,
                         int accel_points, int decel_points,
                         int uniform_speed_hz)
 {
     motor->gpio_dir  = gpio_dir;
     motor->gpio_step = gpio_step;
+    motor->limit_switch = limit_switch;
+    motor->tapper_gpio = tapper_gpio;
+    motor->direction = direction;
 
     gpio_config_t en_dir_gpio_config = {
         .pin_bit_mask = 1ULL << gpio_dir,
@@ -89,7 +93,7 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
     ESP_ERROR_CHECK(rmt_enable(motor->rmt_chan));
 }
 
-bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_blade_config *bottom_side_cfg) {
+bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz) {
     if (gpio_get_level(motor->limit_switch) == 1) {
         ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
         return true;
@@ -126,14 +130,14 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
     return true;
 }
 
-void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_side_config *cfg) {
+void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const taptest_blade_config *cfg) {
     rmt_transmit_config_t tx_config = {
         .loop_count = 0,
         .flags = {
             .eot_level = 0
         }
     };
-    bool direction = !cfg->direction;
+    bool direction = !motor->direction;
     gpio_set_level(motor->gpio_dir, direction);
     uint32_t n_steps = 1;
     tx_config.loop_count = 4000;
@@ -148,7 +152,7 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
         gpio_set_level(motor->gpio_dir, direction);
 
         for (int i = 0; i < (cfg->blade_width / 10) && !stop_requested; i++) {
-            if ((gpio_get_level(cfg->limit_switch) == 1) &&
+            if ((gpio_get_level(motor->limit_switch) == 1) &&
                 (i > 1 && i < 0.9 * cfg->blade_lenght / 10)) {
                 ESP_LOGI("StepperMotor", "End limit switch triggered, stopping tap sequence.");
                 break;
