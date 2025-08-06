@@ -13,20 +13,12 @@
 
 void app_main(void) {
     stepper_motor_t motorbot;
-
-    int gpio_dir;
-    int gpio_step;
-    int limit_switch;
-    int tapper_gpio;
-    rmt_channel_handle_t rmt_chan;
-    rmt_encoder_handle_t accel_encoder;
-    rmt_encoder_handle_t uniform_encoder;
-    rmt_encoder_handle_t decel_encoder;
-    stepper_motor_init(&motorbot, 
+    stepper_motor_init(&motorbot,
                        STEP_MOTOR_GPIO_DIR,
                        STEP_MOTOR_GPIO_STEP,
-                       LIMIT_SWITCH_GPIO,
-                       
+                       TOP_END_LIMIT_GPIO,
+                       IN3,
+                       STEP_MOTOR_SPIN_DIR_CLOCKWISE,
                        500,
                        1500,
                        500,
@@ -49,7 +41,7 @@ void app_main(void) {
 
     uint32_t uniform_speed_hz = 5000;
 
-    taptest_blade_config side_cfg = {160, 340, 50, 1000, 1};
+    taptest_blade_config side_cfg = {160, 340, 50, 1000};
 
     state_t state = STATE_IDLE;
 
@@ -64,15 +56,15 @@ void app_main(void) {
 
             case STATE_TAPBOT_RESET:
                 ESP_LOGI("TapBot", "Resetting tapbot...");
-                carrier_home(&motorbot, &uniform_speed_hz, &side_cfg);
-                
+                carrier_home(&motorbot, &uniform_speed_hz);
+
                 ESP_LOGI("TapBot", "Resetting tapbot...");
                 state = STATE_IDLE;
                 break;
 
             case STATE_TAPTEST_SEQUENCE:
                 ESP_LOGI("Tap Test", "Homing carrier...");
-                carrier_home(&motorbot, &uniform_speed_hz, &side_cfg);
+                carrier_home(&motorbot, &uniform_speed_hz);
                 ESP_LOGI("Tap Test", "Starting tap sequence...");
                 tap_sequence(&motorbot, &uniform_speed_hz, &side_cfg);
                 state = STATE_IDLE;
