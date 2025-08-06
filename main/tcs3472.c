@@ -1,5 +1,6 @@
 #include "tcs3472.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #define TAG "TCS3472"
 

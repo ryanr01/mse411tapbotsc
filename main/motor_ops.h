@@ -18,6 +18,8 @@
 typedef struct {
     int gpio_dir;
     int gpio_step;
+    int limit_switch;
+    int tapper_gpio;
     rmt_channel_handle_t rmt_chan;
     rmt_encoder_handle_t accel_encoder;
     rmt_encoder_handle_t uniform_encoder;
@@ -27,12 +29,9 @@ typedef struct {
 typedef struct {
     float blade_width;
     float blade_lenght;
-    int limit_switch;
-    int tapper_gpio;
     uint32_t tap_duration;
     uint32_t recording_duration;
-    bool direction;
-} taptest_side_config;
+} taptest_blade_config;
 
 typedef enum {
     STATE_IDLE,
