@@ -93,10 +93,20 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
 }
 
 bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t *uniform_speed_hz) {
+    bool tophomed = false;
+    bool bothomed = false;
     if (gpio_get_level(motorbot->limit_switch) == 1) {
+        bothomed = true;
         ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
+    }
+    if (gpio_get_level(motortop->limit_switch) == 1) {
+        tophomed = true;
+        ESP_LOGI("StepperMotor", "Top limit switch already triggered, skipping homing.");
+    }
+    if(tophomed && bothomed) {
         return true;
     }
+
     rmt_transmit_config_t tx_config = {
         .loop_count = 0,
         .flags = {
@@ -107,21 +117,44 @@ bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t
     gpio_set_level(motorbot->gpio_dir, motorbot->direction);
 
     tx_config.loop_count = 1000000;
+    if(!bothomed){
     ESP_ERROR_CHECK(rmt_transmit(motorbot->rmt_chan, motorbot->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config));
+    }
+    if(!tophomed) {
+        ESP_ERROR_CHECK(rmt_transmit(motortop->rmt_chan, motortop->uniform_encoder, uniform_speed_hz,
+                                    sizeof(uint32_t), &tx_config));
+    }
 
-    while (gpio_get_level(motorbot->limit_switch) != 1) {
+
+    while (tophomed == false && bothomed == false) {
         if (stop_requested) {
+            rmt_disable(motortop->rmt_chan);
             rmt_disable(motorbot->rmt_chan);
+            rmt_enable(motortop->rmt_chan);
             rmt_enable(motorbot->rmt_chan);
 
             stop_requested = false;
             return false;
         }
+        if(gpio_get_level(motorbot->limit_switch) == 1)
+        {
+            rmt_disable(motorbot->rmt_chan);
+            rmt_enable(motorbot->rmt_chan);
+            bothomed = true;
+        }
+        if(!tophomed && gpio_get_level(motortop->limit_switch) == 1)
+        {
+            rmt_disable(motortop->rmt_chan);
+            rmt_enable(motortop->rmt_chan);
+            tophomed = true;
+        }
         vTaskDelay(1);
     }
 
+    rmt_disable(motortop->rmt_chan);
     rmt_disable(motorbot->rmt_chan);
+    rmt_enable(motortop->rmt_chan);
     rmt_enable(motorbot->rmt_chan);
     ESP_LOGI("StepperMotor", "end limit reached.");
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motorbot->rmt_chan, -1));
