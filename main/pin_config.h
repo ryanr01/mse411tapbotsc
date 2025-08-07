@@ -46,13 +46,6 @@
 #define STOP_PB_GPIO           21
 #define START_PB_GPIO          47
 #define TAPBOT_RESET_PB_GPIO   48
-
-// //Colour pins
-
-
-#define I2C_SDA GPIO_NUM_45
-#define I2C_SCL GPIO_NUM_35
-
 // // Lidar pins
 // // Implementation is a little scuffed for now
 // // So make sure then pin defs match these in lidar.h
