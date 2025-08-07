@@ -42,9 +42,9 @@
 #define BOT_STEP_MOTOR_GPIO_STEP 39
 #define BOT_END_LIMIT_GPIO        7
 
-#define TOP_STEP_MOTOR_GPIO_DIR  GPIO_NUM_0
-#define TOP_STEP_MOTOR_GPIO_STEP GPIO_NUM_35
-#define TOP_END_LIMIT_GPIO       GPIO_NUM_42
+#define TOP_STEP_MOTOR_GPIO_DIR  35
+#define TOP_STEP_MOTOR_GPIO_STEP 0
+#define TOP_END_LIMIT_GPIO       42
 
 // Sensor and push button pins
 #define STOP_PB_GPIO           21

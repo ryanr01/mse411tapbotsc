@@ -107,7 +107,13 @@ bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t
         return true;
     }
 
-    rmt_transmit_config_t tx_config = {
+    rmt_transmit_config_t tx_config_bot = {
+        .loop_count = 0,
+        .flags = {
+            .eot_level = 0
+        }
+    };
+    rmt_transmit_config_t tx_config_top = {
         .loop_count = 0,
         .flags = {
             .eot_level = 0
@@ -117,24 +123,23 @@ bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t
     gpio_set_level(motorbot->gpio_dir, motorbot->direction);
     gpio_set_level(motortop->gpio_dir, motortop->direction);
 
-    tx_config.loop_count = 1000000;
+    tx_config_bot.loop_count = 1000000;
     if(!bothomed){
         ESP_ERROR_CHECK(rmt_transmit(motorbot->rmt_chan, motorbot->uniform_encoder, uniform_speed_hz,
-                                sizeof(uint32_t), &tx_config));
+                                sizeof(uint32_t), &tx_config_bot));
     }
+    
     if(!tophomed) {
         ESP_ERROR_CHECK(rmt_transmit(motortop->rmt_chan, motortop->uniform_encoder, uniform_speed_hz,
-                                    sizeof(uint32_t), &tx_config));
+                                    sizeof(uint32_t), &tx_config_top));
     }
 
-
-    while (tophomed == false && bothomed == false) {
+    while (!tophomed && !bothomed) {
         if (stop_requested) {
             rmt_disable(motortop->rmt_chan);
             rmt_disable(motorbot->rmt_chan);
             rmt_enable(motortop->rmt_chan);
             rmt_enable(motorbot->rmt_chan);
-
             stop_requested = false;
             return false;
         }
