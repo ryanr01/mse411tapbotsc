@@ -10,7 +10,6 @@
 #include "pin_config.h"
 #include "recordSample.h"
 #include "stepper_motor_encoder.h"
-#include "tcs3472.h"
 
 
 static volatile bool stop_requested = false;
@@ -145,9 +144,6 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
                                 uniform_speed_hz, n_steps * sizeof(uint32_t), &tx_config));
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
 
-    // Initialize the colour sensor once before scanning
-    ESP_ERROR_CHECK(tcs3472_init(I2C_SDA, I2C_SCL));
-
     for (int j = 0; j < 5 && !stop_requested; j++) {
         gpio_set_level(motor->gpio_dir, direction);
 
@@ -165,14 +161,6 @@ void tap_sequence(stepper_motor_t *motor, uint32_t *uniform_speed_hz, const tapt
             float x_coord = (float)j; // Taken as an incremented index for now
             float y_coord = (float)(direction ? i * 10 : (int)(cfg->blade_width - i * 10));
             record_sample(100, "T", x_coord, y_coord); // Record where the data was taken
-
-            // Record colour
-            tcs3472_rgbc_data_t color_data;
-            if (tcs3472_read_colors(&color_data) == ESP_OK) {
-                const char *color = tcs3472_detect_color(color_data);
-                printf("Detected color: %s (R:%d G:%d B:%d C:%d)\n", color,
-                       color_data.r, color_data.g, color_data.b, color_data.c);
-            }
 
             if (stop_requested) {
                 rmt_disable(motor->rmt_chan);
