@@ -115,10 +115,11 @@ bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t
     };
 
     gpio_set_level(motorbot->gpio_dir, motorbot->direction);
+    gpio_set_level(motortop->gpio_dir, motortop->direction);
 
     tx_config.loop_count = 1000000;
     if(!bothomed){
-    ESP_ERROR_CHECK(rmt_transmit(motorbot->rmt_chan, motorbot->uniform_encoder, uniform_speed_hz,
+        ESP_ERROR_CHECK(rmt_transmit(motorbot->rmt_chan, motorbot->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config));
     }
     if(!tophomed) {
@@ -158,6 +159,7 @@ bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t
     rmt_enable(motorbot->rmt_chan);
     ESP_LOGI("StepperMotor", "end limit reached.");
     ESP_ERROR_CHECK(rmt_tx_wait_all_done(motorbot->rmt_chan, -1));
+    ESP_ERROR_CHECK(rmt_tx_wait_all_done(motortop->rmt_chan, -1));
 
     return true;
 }

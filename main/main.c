@@ -31,7 +31,7 @@ void app_main(void) {
                        TOP_STEP_MOTOR_GPIO_STEP,
                        TOP_END_LIMIT_GPIO,
                        IN4,
-                       STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE,
+                       STEP_MOTOR_SPIN_DIR_CLOCKWISE,
                        500,
                        1500,
                        500,
