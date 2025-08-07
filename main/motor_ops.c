@@ -124,17 +124,23 @@ bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t
     gpio_set_level(motortop->gpio_dir, motortop->direction);
 
     tx_config_bot.loop_count = 1000000;
+    tx_config_top.loop_count = 1000000;
     if(!bothomed){
         ESP_ERROR_CHECK(rmt_transmit(motorbot->rmt_chan, motorbot->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config_bot));
     }
-    
+
     if(!tophomed) {
         ESP_ERROR_CHECK(rmt_transmit(motortop->rmt_chan, motortop->uniform_encoder, uniform_speed_hz,
                                     sizeof(uint32_t), &tx_config_top));
     }
 
-    while (!tophomed && !bothomed) {
+    // Continue homing until both the top and bottom limit switches are triggered
+    // The previous condition used logical AND, which caused the loop to exit as
+    // soon as either switch was triggered. That left the other motor running
+    // without supervision and made the RMT channel appear non-functional. Using
+    // logical OR keeps the loop active until both switches report homed.
+    while (!tophomed || !bothomed) {
         if (stop_requested) {
             rmt_disable(motortop->rmt_chan);
             rmt_disable(motorbot->rmt_chan);
