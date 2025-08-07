@@ -14,9 +14,9 @@
 void app_main(void) {
     stepper_motor_t motorbot;
     stepper_motor_init(&motorbot,
-                       STEP_MOTOR_GPIO_DIR,
-                       STEP_MOTOR_GPIO_STEP,
-                       TOP_END_LIMIT_GPIO,
+                       BOT_STEP_MOTOR_GPIO_DIR,
+                       BOT_STEP_MOTOR_GPIO_STEP,
+                       BOT_END_LIMIT_GPIO,
                        IN3,
                        STEP_MOTOR_SPIN_DIR_CLOCKWISE,
                        500,
@@ -24,7 +24,21 @@ void app_main(void) {
                        500,
                        500,
                        1500);
-    setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);
+
+    stepper_motor_t motortop;
+    stepper_motor_init(&motortop,
+                       TOP_STEP_MOTOR_GPIO_DIR,
+                       TOP_STEP_MOTOR_GPIO_STEP,
+                       TOP_END_LIMIT_GPIO,
+                       IN4,
+                       STEP_MOTOR_SPIN_DIR_COUNTERCLOCKWISE,
+                       500,
+                       1500,
+                       500,
+                       500,
+                       1500);
+    setup_gpio_input(TOP_END_LIMIT_GPIO, false, true);                  
+    setup_gpio_input(BOT_END_LIMIT_GPIO, false, true);
     setup_gpio_input(STOP_PB_GPIO, true, false);
     setup_gpio_input(START_PB_GPIO, true, false);
     setup_gpio_input(TAPBOT_RESET_PB_GPIO, true, false);
@@ -56,7 +70,7 @@ void app_main(void) {
 
             case STATE_TAPBOT_RESET:
                 ESP_LOGI("TapBot", "Resetting tapbot...");
-                carrier_home(&motorbot, &uniform_speed_hz);
+                carrier_home(&motorbot,&motortop, &uniform_speed_hz);
 
                 ESP_LOGI("TapBot", "Resetting tapbot...");
                 state = STATE_IDLE;
@@ -64,7 +78,7 @@ void app_main(void) {
 
             case STATE_TAPTEST_SEQUENCE:
                 ESP_LOGI("Tap Test", "Homing carrier...");
-                carrier_home(&motorbot, &uniform_speed_hz);
+                carrier_home(&motorbot,&motortop, &uniform_speed_hz);
                 ESP_LOGI("Tap Test", "Starting tap sequence...");
                 tap_sequence(&motorbot, &uniform_speed_hz, &side_cfg);
                 state = STATE_IDLE;

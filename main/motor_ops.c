@@ -92,8 +92,8 @@ void stepper_motor_init(stepper_motor_t *motor, int gpio_dir, int gpio_step,
     ESP_ERROR_CHECK(rmt_enable(motor->rmt_chan));
 }
 
-bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz) {
-    if (gpio_get_level(motor->limit_switch) == 1) {
+bool carrier_home(stepper_motor_t *motorbot, stepper_motor_t *motortop, uint32_t *uniform_speed_hz) {
+    if (gpio_get_level(motorbot->limit_switch) == 1) {
         ESP_LOGI("StepperMotor", "Limit switch already triggered, skipping homing.");
         return true;
     }
@@ -104,16 +104,16 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz) {
         }
     };
 
-    gpio_set_level(motor->gpio_dir, motor->direction);
+    gpio_set_level(motorbot->gpio_dir, motorbot->direction);
 
     tx_config.loop_count = 1000000;
-    ESP_ERROR_CHECK(rmt_transmit(motor->rmt_chan, motor->uniform_encoder, uniform_speed_hz,
+    ESP_ERROR_CHECK(rmt_transmit(motorbot->rmt_chan, motorbot->uniform_encoder, uniform_speed_hz,
                                 sizeof(uint32_t), &tx_config));
 
-    while (gpio_get_level(motor->limit_switch) != 1) {
+    while (gpio_get_level(motorbot->limit_switch) != 1) {
         if (stop_requested) {
-            rmt_disable(motor->rmt_chan);
-            rmt_enable(motor->rmt_chan);
+            rmt_disable(motorbot->rmt_chan);
+            rmt_enable(motorbot->rmt_chan);
 
             stop_requested = false;
             return false;
@@ -121,10 +121,10 @@ bool carrier_home(stepper_motor_t *motor, uint32_t *uniform_speed_hz) {
         vTaskDelay(1);
     }
 
-    rmt_disable(motor->rmt_chan);
-    rmt_enable(motor->rmt_chan);
+    rmt_disable(motorbot->rmt_chan);
+    rmt_enable(motorbot->rmt_chan);
     ESP_LOGI("StepperMotor", "end limit reached.");
-    ESP_ERROR_CHECK(rmt_tx_wait_all_done(motor->rmt_chan, -1));
+    ESP_ERROR_CHECK(rmt_tx_wait_all_done(motorbot->rmt_chan, -1));
 
     return true;
 }
