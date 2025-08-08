@@ -5,7 +5,7 @@ This repository contains a single `main.c` sketch that drives a small robot usin
 - **Two stepper motors** driven by DRV8825 drivers (step and direction lines only)
 - **Two DC motors** run for fixed durations (no encoders)
 - **Two solenoids** via single-pin control
-- **Three push buttons** (START, RESET, STOP) configured as interrupts triggered on release (rising edge)
+- **Three push buttons** (START, RESET, STOP) using interrupts; START/RESET fire on release (rising edge) while STOP fires on press (falling edge)
 - A `switch`/`enum` state machine (`IDLE`, `RESET`, `SEQUENCE`, `DONE`)
 
 ## Building
