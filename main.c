@@ -256,7 +256,8 @@ void setup() {
     pinMode(STOP_BTN_PIN,  INPUT_PULLUP);
     attachInterrupt(digitalPinToInterrupt(START_BTN_PIN), startButtonISR, RISING);
     attachInterrupt(digitalPinToInterrupt(RESET_BTN_PIN), resetButtonISR, RISING);
-    attachInterrupt(digitalPinToInterrupt(STOP_BTN_PIN),  stopButtonISR,  RISING);
+    // Trigger STOP on press (falling edge) to avoid spurious interrupts on release
+    attachInterrupt(digitalPinToInterrupt(STOP_BTN_PIN),  stopButtonISR,  FALLING);
 }
 
 // --- Main loop ---
