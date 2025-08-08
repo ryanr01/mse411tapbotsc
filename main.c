@@ -64,21 +64,28 @@ void initStepper(uint8_t dirPin, uint8_t stepPin) {
     pinMode(stepPin, OUTPUT);
 }
 
-void stepDistance(uint8_t dirPin, uint8_t stepPin, float cm, bool direction) {
+// Step both X-axis steppers simultaneously for a given distance
+void stepBothDistance(float cm, bool direction) {
     long steps = (long)(cm * STEPS_PER_CM);
-    digitalWrite(dirPin, direction ? HIGH : LOW);
-    for (long i = 0; i < steps; ++i) {
-        digitalWrite(stepPin, HIGH);
+    digitalWrite(STEP1_DIR_PIN, direction ? HIGH : LOW);
+    digitalWrite(STEP2_DIR_PIN, direction ? HIGH : LOW);
+    for (long i = 0; i < steps && !stopPressed; ++i) {
+        digitalWrite(STEP1_STEP_PIN, HIGH);
+        digitalWrite(STEP2_STEP_PIN, HIGH);
         delayMicroseconds(STEP_PULSE_US);
-        digitalWrite(stepPin, LOW);
+        digitalWrite(STEP1_STEP_PIN, LOW);
+        digitalWrite(STEP2_STEP_PIN, LOW);
         delayMicroseconds(STEP_PULSE_US);
-        if (stopPressed) break;
     }
 }
 
 void homeStepper(uint8_t dirPin, uint8_t stepPin, uint8_t limitPin, bool direction) {
-    while (digitalRead(limitPin) == LOW && !stopPressed) {
-        stepDistance(dirPin, stepPin, 1.0, direction);
+    digitalWrite(dirPin, direction ? HIGH : LOW);
+    while (digitalRead(limitPin) == HIGH && !stopPressed) {
+        digitalWrite(stepPin, HIGH);
+        delayMicroseconds(STEP_PULSE_US);
+        digitalWrite(stepPin, LOW);
+        delayMicroseconds(STEP_PULSE_US);
     }
 }
 
@@ -108,6 +115,29 @@ void driveDcMotor(uint8_t dirPin, uint8_t enPin, volatile long *count,
     digitalWrite(enPin, LOW);
 }
 
+// Drive both Y-axis DC motors concurrently for a distance in millimeters
+void driveDcPair(float distance_mm, bool direction) {
+    long target = (long)(distance_mm * COUNTS_PER_MM);
+    dc1Count = 0;
+    dc2Count = 0;
+    digitalWrite(DC1_DIR_PIN, direction ? HIGH : LOW);
+    digitalWrite(DC2_DIR_PIN, direction ? HIGH : LOW);
+    while ((dc1Count < target || dc2Count < target) && !stopPressed) {
+        if (dc1Count < target) {
+            digitalWrite(DC1_EN_PIN, HIGH);
+        }
+        if (dc2Count < target) {
+            digitalWrite(DC2_EN_PIN, HIGH);
+        }
+        delay(10);
+        digitalWrite(DC1_EN_PIN, LOW);
+        digitalWrite(DC2_EN_PIN, LOW);
+        delay(10);
+    }
+    digitalWrite(DC1_EN_PIN, LOW);
+    digitalWrite(DC2_EN_PIN, LOW);
+}
+
 void initSolenoid(uint8_t inPin, uint8_t enPin) {
     pinMode(inPin, OUTPUT);
     pinMode(enPin, OUTPUT);
@@ -121,6 +151,57 @@ void fireSolenoid(uint8_t inPin, uint8_t enPin, uint16_t pulse_ms) {
     delay(pulse_ms);
     digitalWrite(inPin, LOW);
     digitalWrite(enPin, LOW);
+}
+
+// Perform homing for both steppers until their optical switches trigger
+void homing() {
+    // Drive steppers toward their respective limit switches
+    digitalWrite(STEP1_DIR_PIN, HIGH);   // home direction for stepper 1
+    digitalWrite(STEP2_DIR_PIN, LOW);    // home direction for stepper 2
+
+    bool step1Homed = false;
+    bool step2Homed = false;
+
+    while ((!step1Homed || !step2Homed) && !stopPressed) {
+        if (!step1Homed) {
+            digitalWrite(STEP1_STEP_PIN, HIGH);
+            delayMicroseconds(STEP_PULSE_US);
+            digitalWrite(STEP1_STEP_PIN, LOW);
+            delayMicroseconds(STEP_PULSE_US);
+            if (digitalRead(STEP1_LIMIT_PIN) == LOW) {
+                step1Homed = true;
+            }
+        }
+
+        if (!step2Homed) {
+            digitalWrite(STEP2_STEP_PIN, HIGH);
+            delayMicroseconds(STEP_PULSE_US);
+            digitalWrite(STEP2_STEP_PIN, LOW);
+            delayMicroseconds(STEP_PULSE_US);
+            if (digitalRead(STEP2_LIMIT_PIN) == LOW) {
+                step2Homed = true;
+            }
+        }
+    }
+}
+
+// Test mode traverses the blade in a bidirectional raster pattern
+void testMode() {
+    const uint8_t X_TRAVEL_CM = 30;   // width to scan in X
+    const uint8_t Y_TRAVEL_CM = 30;   // length to scan in Y
+    bool xDirection = true;           // start moving in positive X
+
+    for (uint8_t y = 0; y < Y_TRAVEL_CM && !stopPressed; ++y) {
+        for (uint8_t x = 0; x < X_TRAVEL_CM && !stopPressed; ++x) {
+            stepBothDistance(1.0, xDirection);     // move 1 cm in X
+            fireSolenoid(SOL1_IN_PIN, SOL1_EN_PIN, 50);
+            fireSolenoid(SOL2_IN_PIN, SOL2_EN_PIN, 50);
+        }
+        if (y < Y_TRAVEL_CM - 1) {
+            driveDcPair(10.0, true);               // advance 1 cm in Y
+        }
+        xDirection = !xDirection;                  // reverse X direction
+    }
 }
 
 // --- Setup ---
@@ -164,18 +245,13 @@ void loop() {
 
             case RESET:
                 fireSolenoid(SOL1_IN_PIN, SOL1_EN_PIN, 100);
-                homeStepper(STEP1_DIR_PIN, STEP1_STEP_PIN, STEP1_LIMIT_PIN, true);
-                homeStepper(STEP2_DIR_PIN, STEP2_STEP_PIN, STEP2_LIMIT_PIN, false);
+                homing();
                 currentState = IDLE;
                 break;
 
             case SEQUENCE:
-                stepDistance(STEP1_DIR_PIN, STEP1_STEP_PIN, 5.0, true);
-                stepDistance(STEP2_DIR_PIN, STEP2_STEP_PIN, 5.0, false);
-                driveDcMotor(DC1_DIR_PIN, DC1_EN_PIN, &dc1Count, 50.0, true);
-                driveDcMotor(DC2_DIR_PIN, DC2_EN_PIN, &dc2Count, 50.0, false);
-                fireSolenoid(SOL1_IN_PIN, SOL1_EN_PIN, 50);
-                fireSolenoid(SOL2_IN_PIN, SOL2_EN_PIN, 50);
+                homing();
+                testMode();
                 currentState = DONE;
                 break;
 
