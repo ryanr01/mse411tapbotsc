@@ -254,9 +254,9 @@ void setup() {
     pinMode(START_BTN_PIN, INPUT_PULLUP);
     pinMode(RESET_BTN_PIN, INPUT_PULLUP);
     pinMode(STOP_BTN_PIN,  INPUT_PULLUP);
-    attachInterrupt(digitalPinToInterrupt(START_BTN_PIN), startButtonISR, FALLING);
-    attachInterrupt(digitalPinToInterrupt(RESET_BTN_PIN), resetButtonISR, FALLING);
-    attachInterrupt(digitalPinToInterrupt(STOP_BTN_PIN),  stopButtonISR,  FALLING);
+    attachInterrupt(digitalPinToInterrupt(START_BTN_PIN), startButtonISR, RISING);
+    attachInterrupt(digitalPinToInterrupt(RESET_BTN_PIN), resetButtonISR, RISING);
+    attachInterrupt(digitalPinToInterrupt(STOP_BTN_PIN),  stopButtonISR,  RISING);
 }
 
 // --- Main loop ---
