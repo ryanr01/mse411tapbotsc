@@ -19,6 +19,8 @@ arduino-cli upload --port <port> --fqbn <board> .
 
 The code relies only on the Arduino core and runs the sequence inside the `loop()` function.
 
+Debug messages use `Serial.print` and appear on the hardware serial port at 115200 baud. Set your serial monitor to the same rate to view the output.
+
 ## Behavior
 
 1. **RESET**: Fires a solenoid and homes each stepper in 1&nbsp;cm increments until its optical sensor is triggered.

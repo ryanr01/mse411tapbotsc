@@ -1,5 +1,4 @@
 #include <Arduino.h>
-#include <stdio.h>
 
 // Pin assignments
 
@@ -55,15 +54,18 @@ volatile bool stopPressed  = false;
 // --- Interrupt service routines ---
 void startButtonISR() {
     startPressed = true;
-    printf("startPressed set to %d\n", startPressed);
+    Serial.print("startPressed set to ");
+    Serial.println(startPressed);
 }
 void resetButtonISR() {
     resetPressed = true;
-    printf("resetPressed set to %d\n", resetPressed);
+    Serial.print("resetPressed set to ");
+    Serial.println(resetPressed);
 }
 void stopButtonISR()  {
     stopPressed  = true;
-    printf("stopPressed set to %d\n", stopPressed);
+    Serial.print("stopPressed set to ");
+    Serial.println(stopPressed);
 }
 
 // --- Hardware helpers ---
@@ -75,11 +77,17 @@ void initStepper(uint8_t dirPin, uint8_t stepPin) {
 // Step both X-axis steppers simultaneously for a given distance
 void stepBothDistance(float cm, bool direction) {
     long steps = (long)(cm * STEPS_PER_CM);
-    printf("steps calculated as %ld for cm=%f\n", steps, cm);
+    Serial.print("steps calculated as ");
+    Serial.print(steps);
+    Serial.print(" for cm=");
+    Serial.println(cm);
     digitalWrite(STEP1_DIR_PIN, direction ? HIGH : LOW);
     digitalWrite(STEP2_DIR_PIN, direction ? HIGH : LOW);
     for (long i = 0; i < steps && !stopPressed; ++i) {
-        printf("stepping both motors, step %ld of %ld\n", i + 1, steps);
+        Serial.print("stepping both motors, step ");
+        Serial.print(i + 1);
+        Serial.print(" of ");
+        Serial.println(steps);
         digitalWrite(STEP1_STEP_PIN, HIGH);
         digitalWrite(STEP2_STEP_PIN, HIGH);
         delayMicroseconds(STEP_PULSE_US);
@@ -107,12 +115,19 @@ void initDcMotor(uint8_t pin) {
 void runDcMotor(uint8_t pin, unsigned long duration_ms) {
     digitalWrite(pin, HIGH);
     unsigned long start = millis();
-    printf("DC motor on pin %u started at %lu\n", pin, start);
+    Serial.print("DC motor on pin ");
+    Serial.print(pin);
+    Serial.print(" started at ");
+    Serial.println(start);
     while (millis() - start < duration_ms && !stopPressed) {
         delay(1);
     }
     digitalWrite(pin, LOW);
-    printf("DC motor on pin %u stopped after %lu ms\n", pin, millis() - start);
+    Serial.print("DC motor on pin ");
+    Serial.print(pin);
+    Serial.print(" stopped after ");
+    Serial.print(millis() - start);
+    Serial.println(" ms");
 }
 
 // Drive both Y-axis DC motors concurrently for a specified time
@@ -120,13 +135,16 @@ void runDcPair(unsigned long duration_ms) {
     digitalWrite(DC1_PIN, HIGH);
     digitalWrite(DC2_PIN, HIGH);
     unsigned long start = millis();
-    printf("DC pair started at %lu\n", start);
+    Serial.print("DC pair started at ");
+    Serial.println(start);
     while (millis() - start < duration_ms && !stopPressed) {
         delay(1);
     }
     digitalWrite(DC1_PIN, LOW);
     digitalWrite(DC2_PIN, LOW);
-    printf("DC pair stopped after %lu ms\n", millis() - start);
+    Serial.print("DC pair stopped after ");
+    Serial.print(millis() - start);
+    Serial.println(" ms");
 }
 
 void initSolenoid(uint8_t pin) {
@@ -148,8 +166,10 @@ void homing() {
 
     bool step1Homed = false;
     bool step2Homed = false;
-    printf("step1Homed initialized to %d\n", step1Homed);
-    printf("step2Homed initialized to %d\n", step2Homed);
+    Serial.print("step1Homed initialized to ");
+    Serial.println(step1Homed);
+    Serial.print("step2Homed initialized to ");
+    Serial.println(step2Homed);
 
     while ((!step1Homed || !step2Homed) && !stopPressed) {
         if (!step1Homed) {
@@ -159,7 +179,8 @@ void homing() {
             delayMicroseconds(STEP_PULSE_US);
             if (digitalRead(STEP1_LIMIT_PIN) == LOW) {
                 step1Homed = true;
-                printf("step1Homed changed to %d\n", step1Homed);
+                Serial.print("step1Homed changed to ");
+                Serial.println(step1Homed);
             }
         }
 
@@ -170,7 +191,8 @@ void homing() {
             delayMicroseconds(STEP_PULSE_US);
             if (digitalRead(STEP2_LIMIT_PIN) == LOW) {
                 step2Homed = true;
-                printf("step2Homed changed to %d\n", step2Homed);
+                Serial.print("step2Homed changed to ");
+                Serial.println(step2Homed);
             }
         }
     }
@@ -181,12 +203,15 @@ void testMode() {
     const uint8_t X_TRAVEL_CM = 30;   // width to scan in X
     const uint8_t Y_TRAVEL_CM = 30;   // length to scan in Y
     bool xDirection = true;           // start moving in positive X
-    printf("xDirection initialized to %d\n", xDirection);
+    Serial.print("xDirection initialized to ");
+    Serial.println(xDirection);
 
     for (uint8_t y = 0; y < Y_TRAVEL_CM && !stopPressed; ++y) {
-        printf("y incremented to %u\n", y);
+        Serial.print("y incremented to ");
+        Serial.println(y);
         for (uint8_t x = 0; x < X_TRAVEL_CM && !stopPressed; ++x) {
-            printf("x incremented to %u\n", x);
+            Serial.print("x incremented to ");
+            Serial.println(x);
             stepBothDistance(1.0, xDirection);     // move 1 cm in X
             fireSolenoid(SOL1_PIN, 50);
             fireSolenoid(SOL2_PIN, 50);
@@ -195,17 +220,22 @@ void testMode() {
             runDcPair(DC_RUN_MS);                  // advance 1 cm in Y
         }
         xDirection = !xDirection;                  // reverse X direction
-        printf("xDirection toggled to %d\n", xDirection);
+        Serial.print("xDirection toggled to ");
+        Serial.println(xDirection);
     }
 }
 
 // --- Setup ---
 void setup() {
-    Serial.begin(9600);
-    printf("currentState initialized to %s\n", stateToStr(currentState));
-    printf("startPressed initialized to %d\n", startPressed);
-    printf("resetPressed initialized to %d\n", resetPressed);
-    printf("stopPressed initialized to %d\n", stopPressed);
+    Serial.begin(115200);
+    Serial.print("currentState initialized to ");
+    Serial.println(stateToStr(currentState));
+    Serial.print("startPressed initialized to ");
+    Serial.println(startPressed);
+    Serial.print("resetPressed initialized to ");
+    Serial.println(resetPressed);
+    Serial.print("stopPressed initialized to ");
+    Serial.println(stopPressed);
     // Stepper motors
     initStepper(STEP1_DIR_PIN, STEP1_STEP_PIN);
     initStepper(STEP2_DIR_PIN, STEP2_STEP_PIN);
@@ -236,14 +266,18 @@ void loop() {
             case IDLE:
                 if (startPressed) {
                     startPressed = false;
-                    printf("startPressed set to %d\n", startPressed);
+                    Serial.print("startPressed set to ");
+                    Serial.println(startPressed);
                     currentState = SEQUENCE;
-                    printf("currentState changed to %s\n", stateToStr(currentState));
+                    Serial.print("currentState changed to ");
+                    Serial.println(stateToStr(currentState));
                 } else if (resetPressed) {
                     resetPressed = false;
-                    printf("resetPressed set to %d\n", resetPressed);
+                    Serial.print("resetPressed set to ");
+                    Serial.println(resetPressed);
                     currentState = RESET;
-                    printf("currentState changed to %s\n", stateToStr(currentState));
+                    Serial.print("currentState changed to ");
+                    Serial.println(stateToStr(currentState));
                 }
                 break;
 
@@ -251,29 +285,34 @@ void loop() {
                 fireSolenoid(SOL1_PIN, 100);
                 homing();
                 currentState = IDLE;
-                printf("currentState changed to %s\n", stateToStr(currentState));
+                Serial.print("currentState changed to ");
+                Serial.println(stateToStr(currentState));
                 break;
 
             case SEQUENCE:
                 homing();
                 testMode();
                 currentState = DONE;
-                printf("currentState changed to %s\n", stateToStr(currentState));
+                Serial.print("currentState changed to ");
+                Serial.println(stateToStr(currentState));
                 break;
 
             case DONE:
                 currentState = IDLE;
-                printf("currentState changed to %s\n", stateToStr(currentState));
+                Serial.print("currentState changed to ");
+                Serial.println(stateToStr(currentState));
                 break;
         }
 
         if (stopPressed) {
             stopPressed = false;
-            printf("stopPressed set to %d\n", stopPressed);
+            Serial.print("stopPressed set to ");
+            Serial.println(stopPressed);
             digitalWrite(DC1_PIN, LOW);
             digitalWrite(DC2_PIN, LOW);
             currentState = IDLE;
-            printf("currentState changed to %s\n", stateToStr(currentState));
+            Serial.print("currentState changed to ");
+            Serial.println(stateToStr(currentState));
         }
 
         delay(100);
