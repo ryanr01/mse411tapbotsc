@@ -7,6 +7,7 @@
 #include "esp_err.h"
 #include "esp_vfs_fat.h"
 #include "sdmmc_cmd.h"
+#include "driver/sdmmc_host.h"
 #include "driver/sdspi_host.h"
 #include "driver/spi_common.h"
 #include "freertos/FreeRTOS.h"
@@ -20,24 +21,8 @@
 #include "esp_timer.h"
 #include "driver/i2s_std.h"
 #include <time.h>
+#include <pin_config.h>
 
-// Initialize solenoid pins
-#define ENB 4
-#define IN3 17
-#define IN4 8
-
-// MIC GPIO Pins
-#define MIC_I2S_CLK_GPIO 40
-#define MIC_I2S_DATA_GPIO 19
-#define MIC_I2S_LRCL 5 // A.k.A. WS "Word Select"
-
-// SPI2 GPIO pins
-#define PIN_NUM_MISO 13
-#define PIN_NUM_MOSI 11
-#define PIN_NUM_CLK  12
-#define PIN_NUM_CS   10
-
-// Globals... shh, don't tell on me
 double adjusted_rec_time;
 char elnome[128];
 int record_millis;
@@ -45,10 +30,12 @@ int record_millis;
 // RTOS configuration
 void record_wav(void * pvParameters);
 void fire_solenoid_once(void * pvParameters);
+TaskHandle_t record_handle;
+TaskHandle_t fire_handle;
 
 void RTOS_go() {
     // Create task one on core 0
-    TaskHandle_t record_handle;
+    //TaskHandle_t record_handle;
     xTaskCreatePinnedToCore(
         record_wav,           // Task function
         "RecordWav",         // Task name
@@ -59,10 +46,10 @@ void RTOS_go() {
         0                  // Core 0
     );
 
-    vTaskDelay(50);
+    //vTaskDelay(150); // Recording buffer
 
     // Create task two on core 1
-    TaskHandle_t fire_handle;
+    //TaskHandle_t fire_handle;
     xTaskCreatePinnedToCore(
         fire_solenoid_once,           // Task function
         "FireSolenoidOnce",         // Task name
@@ -73,37 +60,61 @@ void RTOS_go() {
         1                  // Core 1
     );
 
-    vTaskDelay(record_millis + 200); // Wait for recording to finish + added buffer
-    vTaskDelete(fire_handle);
-    vTaskDelete(record_handle);
+    vTaskDelay(record_millis + 80); // Wait for recording to finish + added buffer
+    //vTaskDelete(fire_handle);
+    //vTaskDelete(record_handle);
 }
 
+// MIC GPIO Pins
+//#define MIC_I2S_CLK_GPIO 40 //  G
+//#define MIC_I2S_DATA_GPIO 19 // G
+//#define MIC_I2S_LRCL 5 // A.k.A. WS "Word Select"    G
+
+// SPI2 GPIO pins
+// #define PIN_NUM_MISO 13  //  G - 38, OR 13
+// #define PIN_NUM_MOSI 11  //  G - 35, OR 11
+// #define PIN_NUM_CLK  12  //  G - 36, OR 12
+// #define PIN_NUM_CS   10  //  G - 39, OR 10
+
+//SDMMC GPIO Pins
+//#define SDMMC_CLK 12
+//#define SDMMC_CMD 11
+//#define SDMMC_D0 36
+//#define SDMMC_D1 37
+//#define SDMMC_D2 13
+//#define SDMMC_D3_CS 10
+
+// Initialize solenoid pins
+//#define ENB 4
+//#define IN3 1
+//#define IN4 2
 //********************************solenoid functions********************************
 void solenoid_init(void)
 {
-    gpio_reset_pin(ENB);
-    gpio_reset_pin(IN3);
-    gpio_reset_pin(IN4);
+    //gpio_reset_pin(ENB);
+    //gpio_reset_pin(IN3);
+    //gpio_reset_pin(IN4);
     gpio_set_direction(ENB, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN3, GPIO_MODE_OUTPUT);
     gpio_set_direction(IN4, GPIO_MODE_OUTPUT);
-    gpio_set_level(ENB, 0);   
-    gpio_set_level(IN3, 1);
-    gpio_set_level(IN4, 0);
+    //gpio_set_level(ENB, 0);   
+    //gpio_set_level(IN3, 1);
+    //gpio_set_level(IN4, 0);
 }
 void fire_solenoid_once(void * pvParameters)
 {
-    printf("FIRE FIRE FIRE FIRE FIRE FIRE");
+    //printf("FIRE FIRE FIRE FIRE FIRE FIRE");
+    printf("FIRE START");
     gpio_set_level(IN3, 1);
     gpio_set_level(IN4, 0);
-    gpio_set_level(ENB, 1);
-    vTaskDelay(pdMS_TO_TICKS(250)); //250 miliseconds down
+   
+    vTaskDelay(pdMS_TO_TICKS(25)); //50 miliseconds down
 
-    gpio_set_level(ENB, 0);
     gpio_set_level(IN3, 0);
     gpio_set_level(IN4, 0);
-    vTaskDelay(pdMS_TO_TICKS(500)); // 500 miliseconds up
-    while(1);
+    vTaskDelay(pdMS_TO_TICKS(10)); //50 miliseconds down
+    vTaskDelete(fire_handle);
+
 }
 
 #define TAG "SD_SPI"
@@ -141,7 +152,7 @@ void record_wav(void * pvParameters)
     int flash_wr_size = 0;
     ESP_LOGI(TAG, "Opening file");
 
-    uint32_t flash_rec_time = BYTE_RATE * (uint32_t)adjusted_rec_time; // 2/3 multiple tells wav header to be the correct number of bits (we want to exclude redundant bits 19 - 32)
+    uint32_t flash_rec_time = (uint32_t)(BYTE_RATE * adjusted_rec_time); // 2/3 multiple tells wav header to be the correct number of bits (we want to exclude redundant bits 19 - 32)
     const wav_header_t wav_header =
         WAV_HEADER_PCM_DEFAULT(flash_rec_time, MIC_BIT_SAMPLE, MIC_SAMPLE_RATE, NUM_CHANNELS);
 
@@ -269,13 +280,11 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
 
     ESP_LOGI(TAG, "Initializing SD card over SPI");
 
-    sdmmc_host_t host = SDSPI_HOST_DEFAULT();
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     host.slot = SPI2_HOST; // VSPI
+    host.max_freq_khz = SDMMC_FREQ_26M;
 
     spi_bus_config_t bus_cfg = {
-        .mosi_io_num = PIN_NUM_MOSI,
-        .miso_io_num = PIN_NUM_MISO,
-        .sclk_io_num = PIN_NUM_CLK,
         .quadwp_io_num = -1,
         .quadhd_io_num = -1,
         .max_transfer_sz = 65536,
@@ -287,9 +296,18 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
         return;
     }
 
-    sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
-    slot_config.gpio_cs = PIN_NUM_CS;
-    slot_config.host_id = host.slot;
+    //sdspi_device_config_t slot_config = SDSPI_DEVICE_CONFIG_DEFAULT();
+    //slot_config.gpio_cs = PIN_NUM_CS;
+    //slot_config.host_id = host.slot;
+
+    sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
+    slot.width = 1;
+    slot.clk = SDMMC_CLK;
+    slot.cmd = SDMMC_CMD;
+    slot.d0 = SDMMC_D0;
+    slot.d1 = SDMMC_D1;
+    slot.d2 = SDMMC_D2;
+    slot.d3 = SDMMC_D3_CS;
 
     esp_vfs_fat_sdmmc_mount_config_t mount_config = {
         .format_if_mount_failed = false,
@@ -299,7 +317,7 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
 
     sdmmc_card_t *card;
     ESP_LOGI(TAG, "Mounting filesystem...");
-    ret = esp_vfs_fat_sdspi_mount(MOUNT_POINT, &host, &slot_config, &mount_config, &card);
+    ret = esp_vfs_fat_sdmmc_mount(MOUNT_POINT, &host, &slot, &mount_config, &card);
 
     if (ret != ESP_OK) {
         ESP_LOGE(TAG, "Failed to mount filesystem: %s", esp_err_to_name(ret));
@@ -320,10 +338,10 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     char ycoordstr[32];
     char timestr[32];
 
-    snprintf(xcoordstr, sizeof(xcoordstr), "%.2f", x_coordinate);
+    snprintf(xcoordstr, sizeof(xcoordstr), "%.1f", x_coordinate);
     replace_char(xcoordstr, '.', '\0');
 
-    snprintf(ycoordstr, sizeof(ycoordstr), "%.2f", y_coordinate);
+    snprintf(ycoordstr, sizeof(ycoordstr), "%.1f", y_coordinate);
     replace_char(ycoordstr, '.', '\0');
 
     snprintf(timestr, sizeof(timestr), "%ld", (long)tv_now.tv_sec);
@@ -334,9 +352,20 @@ void record_sample(int record_time, char *data_label, float x_coordinate, float 
     
     RTOS_go(); // Start record and tap tasks
 
+   
+
     // Unmount card
     esp_vfs_fat_sdcard_unmount(MOUNT_POINT, card);
     ESP_LOGI(TAG, "Card unmounted");
 
     spi_bus_free(host.slot);
+
+    // Cleanup I2S to free the controller
+    ESP_ERROR_CHECK(i2s_channel_disable(rx_handle));
+    ESP_ERROR_CHECK(i2s_del_channel(rx_handle));
+
+    
+    vTaskDelete(record_handle);
+
+    //vTaskDelay(pdMS_TO_TICKS(500)); // 500 miliseconds up
 }
